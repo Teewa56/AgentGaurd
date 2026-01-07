@@ -16,7 +16,7 @@ The trust and insurance layer for AI agent commerce—making agent transactions 
 
 As AI agents become capable of autonomous transactions, the payments industry faces an existential crisis that threatens to derail the entire agent economy:
 
-**1. The Liability Gap**
+**1. The Liability Gap** 
 - When an AI agent makes a purchase, who is responsible if it goes wrong?
 - Current payment systems have no framework for "agent authorization" vs "user authorization"
 - Credit card companies expect a 5-10% increase in chargebacks as agentic AI rolls out
@@ -60,7 +60,7 @@ AgentGuard is an on-chain dispute resolution and insurance protocol specifically
 - Complex edge cases escalate to DAO governance (token-weighted voting)
 - Clear, explainable reasoning for every decision
 
-**3. Agent Reputation Bonds & Insurance Pools (Killer Feature)**
+**3. Agent Reputation Bonds & Insurance Pools**
 - Agents stake MNEE tokens into bonded insurance pools before transacting
 - Reputation scores (0-1000) determine bond requirements and transaction fees
 - Good agents pay 0.1% fees with minimal bonds; risky agents pay 2% with larger bonds
@@ -115,7 +115,7 @@ Dispute Check → Resolution (AI or DAO) → Settlement
 ```
 
 
-Architecture
+### Architecture
 ```mermaid
 graph TB
     subgraph "Frontend Layer"
@@ -315,17 +315,37 @@ graph TB
    - Pool maintains 3x coverage ratio (total bonds >= 3x monthly dispute volume)
    - Surplus distributed to DAO token holders quarterly
 
+### Additional Features
+
+**Bond Liquidity Options:**
+- Agents can use bonded MNEE as collateral for DeFi loans
+- "Bond pools" where multiple agents share insurance pool (lower individual stakes)
+- Third-party insurance providers can underwrite agent bonds (creates insurance market)
+- Agents can "rent" reputation from high-score agents (credit delegation)
+
+**Merchant Incentives:**
+- "AgentGuard Protected" badge on checkout
+- Priority listing in agent marketplaces
+- Marketing co-op: "We trust AI agents"
+- Analytics dashboard showing agent customer demographics
+
+**Network Effects:**
+- More transactions = better dispute resolution training data
+- Better AI arbitration = faster resolution = lower insurance costs
+- Lower costs = more merchants accept agents = more transactions
+- Becomes industry standard for agent commerce
+
 ---
 
 ## Technology Stack
 
 ### Smart Contracts (Ethereum)
-- **Solidity 0.8.x** - Core contract language
+- **Solidity 0.8.20** - Core contract language
 - **OpenZeppelin Contracts** - Security standards and escrow templates
-- **Hardhat** - Development framework, testing, deployment
-- **Chainlink (future)** - Price oracles for USD/MNEE conversion if needed
+- **Foundry** - Development framework, testing, deployment
+- **Chainlink** - Price oracles for USD/MNEE conversion
 
-**Key Contracts:**
+**Contracts:**
 1. `AgentRegistry.sol` - Agent identity and charter management
 2. `ReputationBond.sol` - Staking, bond management, reputation scoring
 3. `EscrowPayment.sol` - Payment locking, release, dispute handling
@@ -335,12 +355,12 @@ graph TB
 ### Backend Services
 - **Node.js + Express** - API server for agent interactions
 - **PostgreSQL** - Transaction history, analytics, metadata
-- **IPFS (via Pinata or Infura)** - Decentralized evidence storage
+- **IPFS (via Pinata )** - Decentralized evidence storage
 - **Redis** - Caching, rate limiting, session management
 - **Anthropic Claude API** - AI arbitration and dispute analysis
 
 ### Frontend
-- **React 18 + Vite** - Web application framework
+- **React + Vite** - Web application framework
 - **Tailwind CSS** - Styling and UI components
 - **wagmi + viem** - Ethereum wallet connections
 - **RainbowKit** - Wallet connection UI
@@ -348,14 +368,14 @@ graph TB
 - **React Query** - Data fetching and state management
 
 ### Blockchain Infrastructure
-- **Alchemy or Infura** - Ethereum RPC provider
+- **Alchemy** - Ethereum RPC provider
 - **Ethers.js** - Blockchain interactions
-- **The Graph (future)** - Indexing and querying on-chain data
+- **The Graph** - Indexing and querying on-chain data
 - **MNEE Token Contract** - 0x8ccedbAe4916b79da7F3F612EfB2EB93A2bFD6cF (Ethereum)
 
 ### DevOps & Monitoring
 - **Vercel** - Frontend hosting
-- **Railway or Render** - Backend hosting
+- **Render** - Backend hosting
 - **Tenderly** - Smart contract monitoring and debugging
 - **Sentry** - Error tracking
 - **GitHub Actions** - CI/CD pipeline
@@ -374,7 +394,7 @@ Without trust infrastructure, agent commerce cannot scale:
 - AgentGuard provides the missing trust layer
 
 #### 2. Creates Industry Standards
-First-mover advantage in defining:
+Has advantage in defining:
 - Agent authorization frameworks
 - Cryptographic proof of policy compliance
 - Dispute resolution protocols for autonomous systems
@@ -578,7 +598,7 @@ Required Bond = (Monthly Spending Limit / 2) × (1000 - Reputation Score) / 1000
 #### 3. Dynamic Fee Structure
 
 **Base Fee Tiers:**
-| Reputation | Transaction Fee | Bond Multiplier |
+| Reputation | Transaction Fee| Bond Multiplier |
 |------------|----------------|-----------------|
 | 900+       | 0.1%           | 0.1x            |
 | 750-899    | 0.3%           | 0.5x            |
@@ -620,7 +640,7 @@ Required Bond = (Monthly Spending Limit / 2) × (1000 - Reputation Score) / 1000
 **Traditional E-commerce:**
 - Merchant accepts credit card payment
 - Customer can dispute for up to 120 days
-- If chargeback successful: merchant loses product + payment + $25 fee
+- If chargeback successful: merchant loses product + payment + fee
 - Chargeback rate: 0.6-1.2% of transactions
 - Cost to business: significant fraud loss
 
@@ -682,23 +702,3 @@ Merchant makes $3.30 MORE per transaction (3.4% improvement)
 - Smart contracts enforce rules automatically
 - DAO governs edge cases and parameter adjustments
 - Decentralized credit bureau emerges organically
-
-#### 8. Advanced Features
-
-**Bond Liquidity Options:**
-- Agents can use bonded MNEE as collateral for DeFi loans
-- "Bond pools" where multiple agents share insurance pool (lower individual stakes)
-- Third-party insurance providers can underwrite agent bonds (creates insurance market)
-- Agents can "rent" reputation from high-score agents (credit delegation)
-
-**Merchant Incentives:**
-- "AgentGuard Protected" badge on checkout
-- Priority listing in agent marketplaces
-- Marketing co-op: "We trust AI agents"
-- Analytics dashboard showing agent customer demographics
-
-**Network Effects:**
-- More transactions = better dispute resolution training data
-- Better AI arbitration = faster resolution = lower insurance costs
-- Lower costs = more merchants accept agents = more transactions
-- Becomes industry standard for agent commerce
