@@ -360,7 +360,7 @@ graph TB
 - **Anthropic Claude API** - AI arbitration and dispute analysis
 
 ### Frontend
-- **React + Vite** - Web application framework
+- **Next.js** - Web application framework
 - **Tailwind CSS** - Styling and UI components
 - **wagmi + viem** - Ethereum wallet connections
 - **RainbowKit** - Wallet connection UI
