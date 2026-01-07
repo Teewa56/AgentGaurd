@@ -5,6 +5,5 @@ import {Test} from "forge-std/Test.sol";
 import {AgentRegistry} from "../src/AgentRegistry.sol";
 
 contract AgentRegistryTest is Test {
-    AgentRegistry public AgentRegistry;
-
+    AgentRegistry public registry;
 }

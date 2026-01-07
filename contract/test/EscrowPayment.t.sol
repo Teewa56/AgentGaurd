@@ -5,6 +5,5 @@ import {Test} from "forge-std/Test.sol";
 import {EscrowPayment} from "../src/EscrowPayment.sol";
 
 contract EscrowPaymentTest is Test {
-    EscrowPayment public EscrowPayment;
-
+    EscrowPayment public escrow;
 }

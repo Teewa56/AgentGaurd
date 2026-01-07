@@ -5,6 +5,5 @@ import {Test} from "forge-std/Test.sol";
 import {ReputationBond} from "../src/ReputationBond.sol";
 
 contract ReputationBondTest is Test {
-    ReputationBond public ReputationBond;
-
+    ReputationBond public bond;
 }
