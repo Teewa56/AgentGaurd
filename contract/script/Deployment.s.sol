@@ -13,8 +13,7 @@ contract DeploymentScript is Script {
     address constant MNEE = 0x8ccedbAe4916b79da7F3F612EfB2EB93A2bFD6cF;
 
     function run() public {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // 1. Deploy InsurancePool
         InsurancePool pool = new InsurancePool(MNEE);
@@ -42,7 +41,7 @@ contract DeploymentScript is Script {
         registry.setEscrowPayment(address(escrow));
         bond.setAuthorizedContracts(address(escrow), address(dispute));
         escrow.setAuthorizedContracts(address(pool), address(dispute));
-        dispute.addArbitrator(vm.addr(deployerPrivateKey)); // Deployer is the first arbitrator
+        dispute.addArbitrator(msg.sender); // Deployer is the first arbitrator
 
         vm.stopBroadcast();
     }
