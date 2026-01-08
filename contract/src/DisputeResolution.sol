@@ -10,8 +10,13 @@ import "./ReputationBond.sol";
  * @dev Handles arbitration logic, AI resolution signatures, and DAO escalation.
  */
 contract DisputeResolution is Ownable {
-    EscrowPayment public immutable escrow;
-    ReputationBond public immutable bond;
+    EscrowPayment public immutable ESCROW;
+    ReputationBond public immutable BOND;
+
+    // Configurable state variables
+    int256 public reputationPenaltyMax = -50;
+    int256 public reputationPenaltyPartial = -20;
+    int256 public reputationRewardFalseDispute = 5;
 
     // In a production app, this would be an Oracle or a multisig/DAO
     mapping(address => bool) public isArbitrator;
@@ -22,10 +27,30 @@ contract DisputeResolution is Ownable {
         uint256 refundAmount
     );
     event ArbitratorAdded(address indexed arbitrator);
+    event ConfigUpdated(
+        int256 maxPenalty,
+        int256 partialPenalty,
+        int256 falseDisputeReward
+    );
 
     constructor(address _escrow, address _bond) Ownable(msg.sender) {
-        escrow = EscrowPayment(_escrow);
-        bond = ReputationBond(_bond);
+        ESCROW = EscrowPayment(_escrow);
+        BOND = ReputationBond(_bond);
+    }
+
+    function setConfiguration(
+        int256 _reputationPenaltyMax,
+        int256 _reputationPenaltyPartial,
+        int256 _reputationRewardFalseDispute
+    ) external onlyOwner {
+        reputationPenaltyMax = _reputationPenaltyMax;
+        reputationPenaltyPartial = _reputationPenaltyPartial;
+        reputationRewardFalseDispute = _reputationRewardFalseDispute;
+        emit ConfigUpdated(
+            _reputationPenaltyMax,
+            _reputationPenaltyPartial,
+            _reputationRewardFalseDispute
+        );
     }
 
     modifier onlyArbitrator() {
@@ -54,14 +79,14 @@ contract DisputeResolution is Ownable {
 
         (
             address agent,
-            address user,
+            , // user address extracted but unused in this local scope
             ,
             uint256 amount,
             ,
             ,
             bool settled,
 
-        ) = escrow.transactions(txId);
+        ) = ESCROW.transactions(txId);
         require(!settled, "Transaction already settled");
 
         uint256 userAmount = (amount * refundPercent) / 100;
@@ -71,20 +96,20 @@ contract DisputeResolution is Ownable {
         if (refundPercent > 0) {
             // User got a refund, agent likely at fault
             int256 repPenalty = refundPercent == 100
-                ? int256(-50)
-                : int256(-20);
-            bond.updateReputation(agent, repPenalty);
+                ? reputationPenaltyMax
+                : reputationPenaltyPartial;
+            BOND.updateReputation(agent, repPenalty);
 
             if (slashAmount > 0) {
-                bond.slashBond(agent, slashAmount, reasoning);
+                BOND.slashBond(agent, slashAmount, reasoning);
             }
         } else {
             // Merchant protected, agent did well (likely false dispute)
-            bond.updateReputation(agent, 5); // +5 for surviving a false dispute
+            BOND.updateReputation(agent, reputationRewardFalseDispute);
         }
 
         // Execute settlement in Escrow
-        escrow.resolveDispute(txId, userAmount, merchantAmount);
+        ESCROW.resolveDispute(txId, userAmount, merchantAmount);
 
         emit DisputeResolved(txId, reasoning, userAmount);
     }

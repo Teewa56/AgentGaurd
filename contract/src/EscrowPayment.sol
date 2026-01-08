@@ -14,11 +14,14 @@ contract EscrowPayment is Ownable {
     IERC20 public immutable MNEE_TOKEN;
     AgentRegistry public immutable REGISTRY;
     ReputationBond public immutable BOND;
-    address public INSURANCE_POOL;
-    address public DISPUTE_RESOLUTION;
+    address public insurancePool;
+    address public disputeResolution;
 
     uint256 public constant DISPUTE_WINDOW = 24 hours;
-    uint256 public constant SERVICE_FEE_BPS = 50; // 0.5% default
+
+    // Configurable state variables instead of constants
+    uint256 public serviceFeeBps = 50; // 0.5% default
+    int256 public reputationRewardSuccess = 2;
 
     struct Transaction {
         address agent;
@@ -42,6 +45,8 @@ contract EscrowPayment is Ownable {
     );
     event TransactionSettled(uint256 indexed id, bool completed);
     event TransactionDisputed(uint256 indexed id);
+    event ConfigUpdated(uint256 feeBps, int256 repReward);
+    event FundsRescued(address token, uint256 amount);
 
     constructor(
         address _mneeToken,
@@ -57,13 +62,31 @@ contract EscrowPayment is Ownable {
         address _pool,
         address _dispute
     ) external onlyOwner {
-        INSURANCE_POOL = _pool;
-        DISPUTE_RESOLUTION = _dispute;
+        insurancePool = _pool;
+        disputeResolution = _dispute;
+    }
+
+    function setConfiguration(
+        uint256 _feeBps,
+        int256 _repReward
+    ) external onlyOwner {
+        serviceFeeBps = _feeBps;
+        reputationRewardSuccess = _repReward;
+        emit ConfigUpdated(_feeBps, _repReward);
+    }
+
+    // Emergency function to rescue tokens stuck in the contract
+    function emergencyWithdraw(
+        address _token,
+        uint256 _amount
+    ) external onlyOwner {
+        IERC20(_token).transfer(msg.sender, _amount);
+        emit FundsRescued(_token, _amount);
     }
 
     modifier onlyDisputeResolution() {
         require(
-            msg.sender == DISPUTE_RESOLUTION,
+            msg.sender == disputeResolution,
             "Only DisputeResolution can call"
         );
         _;
@@ -88,24 +111,29 @@ contract EscrowPayment is Ownable {
         );
 
         address user = REGISTRY.agentToUser(agent);
+
+        // Fee-on-transfer support: Measure actual received amount
+        uint256 balanceBefore = MNEE_TOKEN.balanceOf(address(this));
         require(
             MNEE_TOKEN.transferFrom(user, address(this), amount),
             "Transfer failed"
         );
+        uint256 receivedAmount = MNEE_TOKEN.balanceOf(address(this)) -
+            balanceBefore;
 
         uint256 txId = nextTransactionId++;
         transactions[txId] = Transaction({
             agent: agent,
             user: user,
             merchant: merchant,
-            amount: amount,
+            amount: receivedAmount, // Tracking actual received amount
             lockEndTimestamp: block.timestamp + DISPUTE_WINDOW,
             isDisputed: false,
             isSettled: false,
             metadataURI: metadataURI
         });
 
-        emit TransactionCreated(txId, agent, merchant, amount);
+        emit TransactionCreated(txId, agent, merchant, receivedAmount);
         return txId;
     }
 
@@ -124,7 +152,7 @@ contract EscrowPayment is Ownable {
         txn.isSettled = true;
 
         // Calculate fees
-        uint256 fee = (txn.amount * SERVICE_FEE_BPS) / 10000;
+        uint256 fee = (txn.amount * serviceFeeBps) / 10000;
         uint256 merchantAmount = txn.amount - fee;
 
         // Release funds
@@ -134,18 +162,17 @@ contract EscrowPayment is Ownable {
         );
 
         // Send fee to InsurancePool
-        if (INSURANCE_POOL != address(0)) {
-            require(MNEE_TOKEN.approve(INSURANCE_POOL, fee), "Approve failed");
-            // Assuming InsurancePool has a receiveFees function
-            (bool success, ) = INSURANCE_POOL.call(
+        if (insurancePool != address(0)) {
+            require(MNEE_TOKEN.approve(insurancePool, fee), "Approve failed");
+            // Strict check: if fee transfer fails, revert the whole settlement
+            (bool success, ) = insurancePool.call(
                 abi.encodeWithSignature("receiveFees(uint256)", fee)
             );
-            // We don't necessarily want to fail the whole settlement if the pool fails,
-            // but for safety we might. Let's just track it for now.
+            require(success, "Fee transfer to pool failed");
         }
 
         // Increase reputation
-        BOND.updateReputation(txn.agent, 2); // +2 for success
+        BOND.updateReputation(txn.agent, reputationRewardSuccess);
 
         emit TransactionSettled(txId, true);
     }
@@ -181,10 +208,6 @@ contract EscrowPayment is Ownable {
         require(!txn.isSettled, "Already settled");
 
         txn.isSettled = true;
-
-        // Ensure we don't transfer more than we have (amount + any slashed funds received)
-        uint256 totalAvailable = MNEE_TOKEN.balanceOf(address(this));
-        // Note: This is a bit simplified, ideally track balance per txId.
 
         if (userAmount > 0) {
             require(

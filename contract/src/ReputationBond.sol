@@ -13,8 +13,9 @@ contract ReputationBond is Ownable {
     IERC20 public immutable MNEE_TOKEN;
     AgentRegistry public immutable REGISTRY;
 
-    uint256 public constant MAX_REPUTATION = 1000;
-    uint256 public constant DEFAULT_REPUTATION = 500;
+    // Configurable reputation constants
+    uint256 public maxReputation = 1000;
+    uint256 public defaultReputation = 500;
 
     struct AgentStats {
         uint256 reputation;
@@ -30,6 +31,7 @@ contract ReputationBond is Ownable {
     event BondStaked(address indexed agent, uint256 amount);
     event ReputationUpdated(address indexed agent, uint256 newScore);
     event BondSlashed(address indexed agent, uint256 amount, string reason);
+    event ConfigUpdated(uint256 maxRep, uint256 defaultRep);
 
     constructor(address _mneeToken, address _registry) Ownable(msg.sender) {
         MNEE_TOKEN = IERC20(_mneeToken);
@@ -42,6 +44,15 @@ contract ReputationBond is Ownable {
     ) external onlyOwner {
         escrowPayment = _escrow;
         disputeResolution = _dispute;
+    }
+
+    function setConfiguration(
+        uint256 _maxRep,
+        uint256 _defaultRep
+    ) external onlyOwner {
+        maxReputation = _maxRep;
+        defaultReputation = _defaultRep;
+        emit ConfigUpdated(_maxRep, _defaultRep);
     }
 
     modifier onlyAuthorized() {
@@ -59,11 +70,14 @@ contract ReputationBond is Ownable {
      */
     function stakeBond(address agent, uint256 amount) external {
         require(REGISTRY.isAgentActive(agent), "Agent not registered");
-        MNEE_TOKEN.transferFrom(msg.sender, address(this), amount);
+        require(
+            MNEE_TOKEN.transferFrom(msg.sender, address(this), amount),
+            "Transfer failed"
+        );
 
         AgentStats storage stats = agentStats[agent];
         if (stats.reputation == 0 && stats.stakedMnee == 0) {
-            stats.reputation = DEFAULT_REPUTATION;
+            stats.reputation = defaultReputation;
         }
         stats.stakedMnee += amount;
 
@@ -72,16 +86,17 @@ contract ReputationBond is Ownable {
 
     /**
      * @dev Calculates the required bond for an agent.
-     * Formula: (Monthly Limit / 2) * (1000 - Rep) / 1000
+     * Formula: (Monthly Limit / 2) * (max - Rep) / max
      */
     function getRequiredBond(address agent) public view returns (uint256) {
-        (, uint256 monthlyLimit, , , , , , bool active) = REGISTRY.agentCharters(agent);
+        (, uint256 monthlyLimit, , , , , , bool active) = REGISTRY
+            .agentCharters(agent);
         require(active, "Agent not active");
 
         uint256 rep = agentStats[agent].reputation;
-        if (rep == 0) rep = DEFAULT_REPUTATION;
+        if (rep == 0) rep = defaultReputation;
 
-        return ((monthlyLimit / 2) * (MAX_REPUTATION - rep)) / MAX_REPUTATION;
+        return ((monthlyLimit * (maxReputation - rep)) / 2) / maxReputation;
     }
 
     /**
@@ -102,8 +117,8 @@ contract ReputationBond is Ownable {
         AgentStats storage stats = agentStats[agent];
         int256 newRep = int256(stats.reputation) + delta;
 
-        if (newRep > int256(MAX_REPUTATION)) {
-            stats.reputation = MAX_REPUTATION;
+        if (newRep > int256(maxReputation)) {
+            stats.reputation = maxReputation;
         } else if (newRep < 0) {
             stats.reputation = 0;
         } else {
@@ -154,6 +169,6 @@ contract ReputationBond is Ownable {
         );
 
         agentStats[agent].stakedMnee -= amount;
-        require(MNEE_TOKEN.transfer(msg.sender, amount), "Transfer failed");
+        require(MNEE_TOKEN.transfer(msg.sender, amount), "Transfer failed"); // Already fixed by user, ensuring standard
     }
 }

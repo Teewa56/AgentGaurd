@@ -9,13 +9,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  * @dev Collects protocol fees and provides a backstop for catastrophic events.
  */
 contract InsurancePool is Ownable {
-    IERC20 public immutable mneeToken;
+    IERC20 public immutable MNEE_TOKEN;
 
     event FeeReceived(address indexed from, uint256 amount);
     event PayoutExecuted(address indexed to, uint256 amount, string reason);
 
     constructor(address _mneeToken) Ownable(msg.sender) {
-        mneeToken = IERC20(_mneeToken);
+        MNEE_TOKEN = IERC20(_mneeToken);
     }
 
     /**
@@ -23,7 +23,7 @@ contract InsurancePool is Ownable {
      */
     function receiveFees(uint256 amount) external {
         require(
-            mneeToken.transferFrom(msg.sender, address(this), amount),
+            MNEE_TOKEN.transferFrom(msg.sender, address(this), amount),
             "Fee transfer failed"
         );
         emit FeeReceived(msg.sender, amount);
@@ -37,7 +37,7 @@ contract InsurancePool is Ownable {
         uint256 amount,
         string calldata reason
     ) external onlyOwner {
-        require(mneeToken.transfer(to, amount), "Payout transfer failed");
+        require(MNEE_TOKEN.transfer(to, amount), "Payout transfer failed");
         emit PayoutExecuted(to, amount, reason);
     }
 
@@ -45,6 +45,6 @@ contract InsurancePool is Ownable {
      * @dev Get current pool balance.
      */
     function getPoolBalance() external view returns (uint256) {
-        return mneeToken.balanceOf(address(this));
+        return MNEE_TOKEN.balanceOf(address(this));
     }
 }
