@@ -132,7 +132,7 @@ graph TB
     end
 
     subgraph "Data Layer"
-        PG[(PostgreSQL)]
+        MD[(MongoDB)]
         REDIS[(Redis Cache)]
         IPFS[IPFS/Pinata<br/>Evidence Vault]
     end
@@ -354,7 +354,7 @@ graph TB
 
 ### Backend Services
 - **Node.js + Express** - API server for agent interactions
-- **PostgreSQL** - Transaction history, analytics, metadata
+- **MongoDB** - Transaction history, analytics, metadata
 - **IPFS (via Pinata )** - Decentralized evidence storage
 - **Redis** - Caching, rate limiting, session management
 - **Anthropic Claude API** - AI arbitration and dispute analysis

@@ -105,7 +105,7 @@ contract IntegratedFlowTest is Test {
 
         // Arbitrator resolves with 100% refund and slashes 10 MNEE
         vm.prank(arbitrator);
-        dispute.resolveViaAI(txId, 100, 10e18, "Policy violation detected");
+        dispute.resolveViaAi(txId, 100, 10e18, "Policy violation detected");
 
         // Verify Refund
         assertEq(mnee.balanceOf(user), 10000e18 - 500e18); // Full refund of 50, but 500 still staked

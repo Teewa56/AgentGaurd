@@ -11,11 +11,11 @@ import "./ReputationBond.sol";
  * @dev Manages payment locking, escrow periods, and transaction metadata.
  */
 contract EscrowPayment is Ownable {
-    IERC20 public immutable mneeToken;
-    AgentRegistry public immutable registry;
-    ReputationBond public immutable bond;
-    address public insurancePool;
-    address public disputeResolution;
+    IERC20 public immutable MNEE_TOKEN;
+    AgentRegistry public immutable REGISTRY;
+    ReputationBond public immutable BOND;
+    address public INSURANCE_POOL;
+    address public DISPUTE_RESOLUTION;
 
     uint256 public constant DISPUTE_WINDOW = 24 hours;
     uint256 public constant SERVICE_FEE_BPS = 50; // 0.5% default
@@ -48,22 +48,22 @@ contract EscrowPayment is Ownable {
         address _registry,
         address _bond
     ) Ownable(msg.sender) {
-        mneeToken = IERC20(_mneeToken);
-        registry = AgentRegistry(_registry);
-        bond = ReputationBond(_bond);
+        MNEE_TOKEN = IERC20(_mneeToken);
+        REGISTRY = AgentRegistry(_registry);
+        BOND = ReputationBond(_bond);
     }
 
     function setAuthorizedContracts(
         address _pool,
         address _dispute
     ) external onlyOwner {
-        insurancePool = _pool;
-        disputeResolution = _dispute;
+        INSURANCE_POOL = _pool;
+        DISPUTE_RESOLUTION = _dispute;
     }
 
     modifier onlyDisputeResolution() {
         require(
-            msg.sender == disputeResolution,
+            msg.sender == DISPUTE_RESOLUTION,
             "Only DisputeResolution can call"
         );
         _;
@@ -78,18 +78,18 @@ contract EscrowPayment is Ownable {
         string calldata metadataURI
     ) external returns (uint256) {
         address agent = msg.sender;
-        require(registry.isAgentActive(agent), "Agent not active");
-        require(bond.hasSufficientBond(agent), "Insufficient reputation bond");
+        require(REGISTRY.isAgentActive(agent), "Agent not active");
+        require(BOND.hasSufficientBond(agent), "Insufficient reputation bond");
 
         // Check charter and record spending
         require(
-            registry.authorizeAndRecordTransaction(agent, amount),
+            REGISTRY.authorizeAndRecordTransaction(agent, amount),
             "Charter violation"
         );
 
-        address user = registry.agentToUser(agent);
+        address user = REGISTRY.agentToUser(agent);
         require(
-            mneeToken.transferFrom(user, address(this), amount),
+            MNEE_TOKEN.transferFrom(user, address(this), amount),
             "Transfer failed"
         );
 
@@ -129,15 +129,15 @@ contract EscrowPayment is Ownable {
 
         // Release funds
         require(
-            mneeToken.transfer(txn.merchant, merchantAmount),
+            MNEE_TOKEN.transfer(txn.merchant, merchantAmount),
             "Merchant payment failed"
         );
 
         // Send fee to InsurancePool
-        if (insurancePool != address(0)) {
-            mneeToken.approve(insurancePool, fee);
+        if (INSURANCE_POOL != address(0)) {
+            require(MNEE_TOKEN.approve(INSURANCE_POOL, fee), "Approve failed");
             // Assuming InsurancePool has a receiveFees function
-            (bool success, ) = insurancePool.call(
+            (bool success, ) = INSURANCE_POOL.call(
                 abi.encodeWithSignature("receiveFees(uint256)", fee)
             );
             // We don't necessarily want to fail the whole settlement if the pool fails,
@@ -145,7 +145,7 @@ contract EscrowPayment is Ownable {
         }
 
         // Increase reputation
-        bond.updateReputation(txn.agent, 2); // +2 for success
+        BOND.updateReputation(txn.agent, 2); // +2 for success
 
         emit TransactionSettled(txId, true);
     }
@@ -183,18 +183,18 @@ contract EscrowPayment is Ownable {
         txn.isSettled = true;
 
         // Ensure we don't transfer more than we have (amount + any slashed funds received)
-        uint256 totalAvailable = mneeToken.balanceOf(address(this));
+        uint256 totalAvailable = MNEE_TOKEN.balanceOf(address(this));
         // Note: This is a bit simplified, ideally track balance per txId.
 
         if (userAmount > 0) {
             require(
-                mneeToken.transfer(txn.user, userAmount),
+                MNEE_TOKEN.transfer(txn.user, userAmount),
                 "User refund failed"
             );
         }
         if (merchantAmount > 0) {
             require(
-                mneeToken.transfer(txn.merchant, merchantAmount),
+                MNEE_TOKEN.transfer(txn.merchant, merchantAmount),
                 "Merchant payment failed"
             );
         }

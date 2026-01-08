@@ -10,15 +10,15 @@ import "./AgentRegistry.sol";
  * @dev Manages agent bonds (staked MNEE) and reputation scores.
  */
 contract ReputationBond is Ownable {
-    IERC20 public immutable mneeToken;
-    AgentRegistry public immutable registry;
+    IERC20 public immutable MNEE_TOKEN;
+    AgentRegistry public immutable REGISTRY;
 
     uint256 public constant MAX_REPUTATION = 1000;
     uint256 public constant DEFAULT_REPUTATION = 500;
 
     struct AgentStats {
         uint256 reputation;
-        uint256 stakedMNEE;
+        uint256 stakedMnee;
         uint256 lastUpdateTimestamp;
     }
 
@@ -32,8 +32,8 @@ contract ReputationBond is Ownable {
     event BondSlashed(address indexed agent, uint256 amount, string reason);
 
     constructor(address _mneeToken, address _registry) Ownable(msg.sender) {
-        mneeToken = IERC20(_mneeToken);
-        registry = AgentRegistry(_registry);
+        MNEE_TOKEN = IERC20(_mneeToken);
+        REGISTRY = AgentRegistry(_registry);
     }
 
     function setAuthorizedContracts(
@@ -58,14 +58,14 @@ contract ReputationBond is Ownable {
      * @dev Staking MNEE to meet bond requirements.
      */
     function stakeBond(address agent, uint256 amount) external {
-        require(registry.isAgentActive(agent), "Agent not registered");
-        mneeToken.transferFrom(msg.sender, address(this), amount);
+        require(REGISTRY.isAgentActive(agent), "Agent not registered");
+        MNEE_TOKEN.transferFrom(msg.sender, address(this), amount);
 
         AgentStats storage stats = agentStats[agent];
-        if (stats.reputation == 0 && stats.stakedMNEE == 0) {
+        if (stats.reputation == 0 && stats.stakedMnee == 0) {
             stats.reputation = DEFAULT_REPUTATION;
         }
-        stats.stakedMNEE += amount;
+        stats.stakedMnee += amount;
 
         emit BondStaked(agent, amount);
     }
@@ -75,8 +75,7 @@ contract ReputationBond is Ownable {
      * Formula: (Monthly Limit / 2) * (1000 - Rep) / 1000
      */
     function getRequiredBond(address agent) public view returns (uint256) {
-        (, uint256 monthlyLimit, , , , , , bool active) = registry
-            .agentCharters(agent);
+        (, uint256 monthlyLimit, , , , , , bool active) = REGISTRY.agentCharters(agent);
         require(active, "Agent not active");
 
         uint256 rep = agentStats[agent].reputation;
@@ -89,7 +88,7 @@ contract ReputationBond is Ownable {
      * @dev Checks if an agent has sufficient bond.
      */
     function hasSufficientBond(address agent) external view returns (bool) {
-        return agentStats[agent].stakedMNEE >= getRequiredBond(agent);
+        return agentStats[agent].stakedMnee >= getRequiredBond(agent);
     }
 
     /**
@@ -127,16 +126,16 @@ contract ReputationBond is Ownable {
             "Only DisputeResolution can slash"
         );
         require(
-            agentStats[agent].stakedMNEE >= amount,
+            agentStats[agent].stakedMnee >= amount,
             "Insufficient stake to slash"
         );
 
-        agentStats[agent].stakedMNEE -= amount;
+        agentStats[agent].stakedMnee -= amount;
 
         // Transfer slashed amount to Escrow or InsurancePool
         // Here we send it to Escrow so it can be part of the dispute settlement
         require(
-            mneeToken.transfer(escrowPayment, amount),
+            MNEE_TOKEN.transfer(escrowPayment, amount),
             "Slash transfer failed"
         );
 
@@ -147,14 +146,14 @@ contract ReputationBond is Ownable {
      * @dev Withdraw excess bond.
      */
     function withdrawExcess(address agent, uint256 amount) external {
-        require(registry.agentToUser(agent) == msg.sender, "Not agent owner");
+        require(REGISTRY.agentToUser(agent) == msg.sender, "Not agent owner");
         uint256 required = getRequiredBond(agent);
         require(
-            agentStats[agent].stakedMNEE - amount >= required,
+            agentStats[agent].stakedMnee - amount >= required,
             "Cannot withdraw below required bond"
         );
 
-        agentStats[agent].stakedMNEE -= amount;
-        mneeToken.transfer(msg.sender, amount);
+        agentStats[agent].stakedMnee -= amount;
+        require(MNEE_TOKEN.transfer(msg.sender, amount), "Transfer failed");
     }
 }

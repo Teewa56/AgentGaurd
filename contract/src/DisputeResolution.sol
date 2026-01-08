@@ -44,7 +44,7 @@ contract DisputeResolution is Ownable {
      * @param refundPercent Percentage to refund to user (0-100).
      * @param slashAmount Amount to slash from agent's bond if it was a policy violation.
      */
-    function resolveViaAI(
+    function resolveViaAi(
         uint256 txId,
         uint256 refundPercent,
         uint256 slashAmount,
