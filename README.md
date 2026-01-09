@@ -151,7 +151,7 @@ graph TB
     end
 
     subgraph "External Services"
-        CLAUDE[Claude API<br/>AI Arbitration]
+        LLM[LLM API<br/>AI Arbitration]
         ALCHEMY[Alchemy/Infura<br/>RPC Provider]
         ETHERSCAN[Etherscan API<br/>Verification]
     end
@@ -165,7 +165,7 @@ graph TB
     API --> REDIS
     API --> IPFS
     API --> ALCHEMY
-    ARB --> CLAUDE
+    ARB --> LLM
     API --> ARB
     API --> NOTIF
     API --> ANALYTICS
@@ -266,7 +266,7 @@ graph TB
    - Uploads evidence if applicable
 
 2. **AI Arbitration (First Pass - resolves 85% of disputes)**
-   - Claude API analyzes full context:
+   - LLM API analyzes full context:
      - Agent charter vs actual transaction
      - Transaction metadata and evidence vault
      - User's dispute claim
@@ -357,7 +357,7 @@ graph TB
 - **MongoDB** - Transaction history, analytics, metadata
 - **IPFS (via Pinata )** - Decentralized evidence storage
 - **Redis** - Caching, rate limiting, session management
-- **Anthropic Claude API** - AI arbitration and dispute analysis
+- **LLM API** - AI arbitration and dispute analysis
 
 ### Frontend
 - **Next.js** - Web application framework

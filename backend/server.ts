@@ -1,6 +1,10 @@
 import app from './app';
 import http from 'http';
+import mongoose from 'mongoose';
+import dotenv from 'dotenv';
 import { BlockchainService } from './services/BlockchainService';
+
+dotenv.config();
 
 const PORT = process.env.PORT || 3001;
 
@@ -8,9 +12,12 @@ const server = http.createServer(app);
 
 async function startServer() {
     try {
-        // Database connection initialization would go here
-        // await AppDataSource.initialize(); 
-        // console.log("Data Source has been initialized!");
+        // Database connection initialization
+        if (!process.env.MONGO_URI) {
+            throw new Error("MONGO_URI not defined in environment");
+        }
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log(" MongoDB Connected Successfully");
 
         // Blockchain service initialization
         if (process.env.PRIVATE_KEY && process.env.ESCROW_ADDRESS) {

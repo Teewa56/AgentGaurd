@@ -1,34 +1,27 @@
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn } from "typeorm";
+import mongoose, { Schema, Document } from 'mongoose';
 
-@Entity()
-export class Dispute {
-    @PrimaryGeneratedColumn()
-    id!: number;
-
-    @Column()
-    txId!: number;
-
-    @Column()
-    agentAddress!: string;
-
-    @Column()
-    userAddress!: string;
-
-    @Column({ type: "decimal", precision: 20, scale: 0 })
-    amount!: string;
-
-    @Column()
-    status!: string; // Pending, Arbitrating, Resolved, Appealed
-
-    @Column({ nullable: true })
-    claudeAnalysis?: string;
-
-    @Column({ nullable: true })
+export interface IDispute extends Document {
+    txId: number;
+    agentAddress: string;
+    userAddress: string;
+    amount: string; // Stored as string to handle large numbers (Wei)
+    status: 'Pending' | 'Arbitrating' | 'Resolved' | 'Appealed';
+    claudeAnalysis?: string; // Kept name for compatibility, can be generic 'aiAnalysis'
     refundPercent?: number;
-
-    @Column({ nullable: true })
     slashAmount?: string;
-
-    @CreateDateColumn()
-    createdAt!: Date;
+    createdAt: Date;
 }
+
+const DisputeSchema: Schema = new Schema({
+    txId: { type: Number, required: true, unique: true },
+    agentAddress: { type: String, required: true },
+    userAddress: { type: String, required: true },
+    amount: { type: String, required: true },
+    status: { type: String, enum: ['Pending', 'Arbitrating', 'Resolved', 'Appealed'], default: 'Pending' },
+    claudeAnalysis: { type: String },
+    refundPercent: { type: Number },
+    slashAmount: { type: String },
+    createdAt: { type: Date, default: Date.now }
+});
+
+export default mongoose.model<IDispute>('Dispute', DisputeSchema);

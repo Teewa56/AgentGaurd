@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 //santization 
 import agentRoutes from './routes/agentRoutes';
 import disputeRoutes from './routes/disputeRoutes';
+import authRoutes from './routes/authRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -24,6 +25,7 @@ app.get('/health', (req, res) => {
 });
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/disputes', disputeRoutes);
 

@@ -1,11 +1,16 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
-const anthropic = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Ensure API key is present
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+    console.error("WARNING: GEMINI_API_KEY is not set in environment variables.");
+}
+
+const genAI = new GoogleGenerativeAI(apiKey || 'mock_key');
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 export interface DisputeContext {
     txId: number;
@@ -21,7 +26,7 @@ export interface ArbitrationResult {
     reasoning: string;
 }
 
-export class ClaudeService {
+export class GeminiService {
     async analyzeDispute(context: DisputeContext): Promise<ArbitrationResult> {
         const prompt = `
       You are an AI Arbitrator for AgentGuard, a protocol for autonomous AI agent commerce.
@@ -46,28 +51,28 @@ export class ClaudeService {
         "slashAmount": "string",
         "reasoning": "string"
       }
+      Do not include markdown formatting like \`\`\`json. Just the raw JSON object.
     `;
 
         try {
-            const response = await anthropic.messages.create({
-                model: "claude-3-5-sonnet-20241022",
-                max_tokens: 1000,
-                messages: [{ role: "user", content: prompt }],
-            });
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
 
-            const content = response.content[0];
-            if (content.type === 'text') {
-                const result = JSON.parse(content.text);
-                return {
-                    refundPercent: result.refundPercent,
-                    slashAmount: result.slashAmount || "0",
-                    reasoning: result.reasoning
-                };
-            }
-            throw new Error("Unexpected response from Claude");
+            // Clean up potential markdown formatting if model ignores instruction
+            const cleanJson = text.replace(/```json/g, '').replace(/```/g, '').trim();
+
+            const parsed = JSON.parse(cleanJson);
+
+            return {
+                refundPercent: parsed.refundPercent,
+                slashAmount: parsed.slashAmount || "0",
+                reasoning: parsed.reasoning
+            };
+
         } catch (error) {
-            console.error("Error in Claude Arbitration:", error);
-            // Fallback for demo purposes if API fails or key is missing
+            console.error("Error in Gemini Arbitration:", error);
+            // Fallback
             return {
                 refundPercent: 0,
                 slashAmount: "0",
