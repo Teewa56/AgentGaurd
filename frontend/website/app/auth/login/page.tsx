@@ -18,12 +18,7 @@ export default function Login() {
         setLoading(true);
 
         try {
-            // Backend expects: { email, password }
-            // Returns: { token, user: { ... } }
-            // NOTE: Backend returns 'token' as access token, and sets 'refreshToken' in cookie.
             const { data } = await api.post('/auth/login', { email, password });
-
-            // Use the context login function
             login(data.token, data.user);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed');

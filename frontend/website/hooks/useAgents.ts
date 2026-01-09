@@ -21,7 +21,6 @@ export const useAgents = () => {
     return useQuery({
         queryKey: ['agents'],
         queryFn: async () => {
-            // Fetches all agents by calling GET /agents
             const { data } = await api.get('/agents');
             return data as Agent[];
         }

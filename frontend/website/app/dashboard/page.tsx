@@ -10,19 +10,6 @@ import {
     ArrowUpRight
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-'use client';
-
-import { DashboardLayout } from '@/components/DashboardLayout';
-import {
-    Shield,
-    TrendingUp,
-    AlertTriangle,
-    CheckCircle2,
-    Clock,
-    ArrowUpRight
-} from 'lucide-react';
-import { motion } from 'framer-motion';
 import { useStats } from '@/hooks/useStats';
 import { useAgents } from '@/hooks/useAgents';
 import { useTransactions } from '@/hooks/useTransactions';
@@ -46,9 +33,9 @@ export default function Dashboard() {
     // Default to 0/empty if data fetch fails or is pending
     const displayStats = [
         { label: 'Total Reputation', value: stats?.totalReputation || 0, icon: Shield, color: 'text-blue-600', trend: 'Global Score' },
-        { label: 'Total Staked', value: `${stats?.totalStaked || 0} MNEE`, icon: trendingup, color: 'text-indigo-600', trend: 'Across agents' },
-        { label: 'Active Disputes', value: stats?.activeDisputes || 0, icon: alerttriangle, color: 'text-amber-600', trend: 'Requires attention' },
-        { label: 'Success Rate', value: `${stats?.successRate || 100}%`, icon: checkcircle2, color: 'text-emerald-600', trend: `from ${stats?.totalTransactions || 0} txs` },
+        { label: 'Total Staked', value: `${stats?.totalStaked || 0} MNEE`, icon: TrendingUp, color: 'text-indigo-600', trend: 'Across agents' },
+        { label: 'Active Disputes', value: stats?.activeDisputes || 0, icon: AlertTriangle, color: 'text-amber-600', trend: 'Requires attention' },
+        { label: 'Success Rate', value: `${stats?.successRate || 100}%`, icon: CheckCircle2, color: 'text-emerald-600', trend: `from ${stats?.totalTransactions || 0} txs` },
     ];
 
     return (
@@ -142,7 +129,6 @@ export default function Dashboard() {
                         </div>
                     </div>
 
-                    {/* Recent Activity */}
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold">Recent Activity</h2>
                         <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-6">
@@ -174,13 +160,3 @@ export default function Dashboard() {
         </DashboardLayout>
     );
 }
-
-// Fix for icon casing in mapping
-const trendingup = TrendingUp;
-const alerttriangle = AlertTriangle;
-const checkcircle2 = CheckCircle2;
-
-// Fix for icon casing in mapping
-const trendingup = TrendingUp;
-const alerttriangle = AlertTriangle;
-const checkcircle2 = CheckCircle2;

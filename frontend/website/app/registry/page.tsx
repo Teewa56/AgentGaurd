@@ -28,7 +28,7 @@ export default function Registry() {
   const handleSubmit = async () => {
     try {
       await api.post('/agents', {
-        name: formData.name, // Note: Backend handles address/charter. Name might be extra or mapped to charter metadata if needed.
+        name: formData.name, 
         address: formData.address,
         charter: formData.description,
         dailySpendingLimit: Number(formData.dailyLimit),

@@ -33,11 +33,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const router = useRouter();
 
     useEffect(() => {
-        // Hydrate user from storage/cookie on load
-        // NOTE: Ideally we fetch /auth/me from backend using validity of refresh token
-        // But for MVP, if we have accessToken in cookie (or localStorage), we consider logged in
-        // A better approach is to hit an endpoint like /auth/me
-
         const initAuth = async () => {
             const token = Cookies.get('accessToken');
             const storedUser = localStorage.getItem('agentguard_user');
@@ -67,8 +62,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const logout = () => {
         Cookies.remove('accessToken');
         localStorage.removeItem('agentguard_user');
-        // Check if backend has logout endpoint to clear HttpOnly cookie
-        // api.post('/auth/logout').catch(console.error);
         setUser(null);
         router.push('/auth/login');
     };
