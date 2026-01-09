@@ -18,7 +18,7 @@ contract DisputeResolution is Ownable {
     int256 public reputationPenaltyPartial = -20;
     int256 public reputationRewardFalseDispute = 5;
 
-    // In a production app, this would be an Oracle or a multisig/DAO
+    // For later improvements, this would be an Oracle or a multisig/DAO
     mapping(address => bool) public isArbitrator;
 
     event DisputeResolved(

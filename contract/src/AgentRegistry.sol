@@ -97,7 +97,6 @@ contract AgentRegistry is Ownable {
         address agent,
         uint256 amount
     ) external onlyEscrowPayment returns (bool) {
-        // In a real scenario, this would have access control (e.g., onlyEscrowPayment)
         Charter storage charter = agentCharters[agent];
         require(charter.isActive, "Agent not active");
         require(amount <= charter.spendingLimitPerTx, "Exceeds per-tx limit");

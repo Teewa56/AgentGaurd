@@ -107,7 +107,7 @@ contract ReputationBond is Ownable {
     }
 
     /**
-     * @dev Updates reputation. In a real system, this would be restricted to
+     * @dev Updates reputation.  this is  restricted to only
      * trusted contracts (Escrow/DisputeResolution).
      */
     function updateReputation(
@@ -169,6 +169,6 @@ contract ReputationBond is Ownable {
         );
 
         agentStats[agent].stakedMnee -= amount;
-        require(MNEE_TOKEN.transfer(msg.sender, amount), "Transfer failed"); // Already fixed by user, ensuring standard
+        require(MNEE_TOKEN.transfer(msg.sender, amount), "Transfer failed");
     }
 }
