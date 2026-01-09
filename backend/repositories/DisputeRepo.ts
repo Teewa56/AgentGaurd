@@ -26,6 +26,6 @@ export class DisputeRepo {
     }
 
     static async countActive(): Promise<number> {
-        return Dispute.countDocuments({ status: { $in: ['Open', 'Arbitrating'] } });
+        return Dispute.countDocuments({ status: { $in: [DisputeStatus.PENDING, DisputeStatus.ARBITRATING] } });
     }
 }

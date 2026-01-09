@@ -62,8 +62,6 @@ export class AuthController {
                 { expiresIn: SECURITY_CONFIG.JWT_REFRESH_EXPIRES_IN }
             );
 
-            // In a stateful arch, we'd save refreshToken to DB.
-            // For stateless, we just send it. We'll send it as HTTP Only Cookie for better security.
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === 'production',

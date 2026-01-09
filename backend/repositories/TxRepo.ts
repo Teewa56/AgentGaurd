@@ -17,4 +17,8 @@ export class TxRepo {
     static async countAll(): Promise<number> {
         return Transaction.countDocuments();
     }
+
+    static async countByStatus(status: 'Initiated' | 'Completed' | 'Disputed' | 'Refunded'): Promise<number> {
+        return Transaction.countDocuments({ status });
+    }
 }
