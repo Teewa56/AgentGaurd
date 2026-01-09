@@ -10,7 +10,6 @@ export class AgentController {
         try {
             const { address, charter, dailySpendingLimit, monthlySpendingLimit, transactionLimit } = req.body;
 
-            // Get userId from authenticated token (AuthMiddleware)
             const userId = (req as any).user?.id;
 
             if (!userId) {
@@ -46,7 +45,6 @@ export class AgentController {
         try {
             const { address } = req.params;
 
-            // Check cache first
             const cached = await CacheService.get(`agent_stats_${address}`);
             if (cached) {
                 return res.json(cached);

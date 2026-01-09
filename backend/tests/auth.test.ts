@@ -2,11 +2,12 @@ import request from 'supertest';
 import app from '../app';
 import mongoose from 'mongoose';
 import User from '../models/User';
+import dotenv from 'dotenv';
+dotenv.config();
 
 describe('Auth Endpoints', () => {
 
     beforeAll(async () => {
-        // Mock DB connection or use a test DB
         if (process.env.MONGO_URI) {
             await mongoose.connect(process.env.MONGO_URI);
         }

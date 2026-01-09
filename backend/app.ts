@@ -18,6 +18,7 @@ app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10kb' })); // Body limit
+app.use(cookieParser());
 app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
 
 // Basic Route

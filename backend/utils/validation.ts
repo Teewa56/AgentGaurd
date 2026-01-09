@@ -1,20 +1,23 @@
-// Basic validation helpers since we didn't install Joi/Zod
-// In a production app, use 'zod' or 'joi'
+import Joi from 'joi';
 
-export const validateEmail = (email: string): boolean => {
-    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return re.test(email);
-};
+export const registerUserSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().min(8).required(),
+    role: Joi.string().valid('user', 'agent', 'admin').default('user')
+});
 
-export const validateEthAddress = (address: string): boolean => {
-    return /^0x[a-fA-F0-9]{40}$/.test(address);
-};
+export const loginUserSchema = Joi.object({
+    email: Joi.string().email().required(),
+    password: Joi.string().required()
+});
 
-export const ValidationSchemas = {
-    REGISTER_USER: {
-        required: ['email', 'password'],
-    },
-    REGISTER_AGENT: {
-        required: ['userId', 'address', 'charter'],
-    }
-};
+export const registerAgentSchema = Joi.object({
+    address: Joi.string().regex(/^0x[a-fA-F0-9]{40}$/).required().messages({
+        'string.pattern.base': 'Address must be a valid Ethereum address'
+    }),
+    charter: Joi.string().required(),
+    dailySpendingLimit: Joi.number().min(0).required(),
+    monthlySpendingLimit: Joi.number().min(0).required(),
+    transactionLimit: Joi.number().min(0).required(),
+    // userId is extracted from token, not body
+});

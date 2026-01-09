@@ -1,26 +1,11 @@
 import { ethers } from 'ethers';
 import dotenv from 'dotenv';
 import { GeminiService } from './LLMService';
-import fs from 'fs';
-import path from 'path';
+import { DisputeRepo } from '../repositories/DisputeRepo';
+import { IPFSService } from './IPFSservice';
+import { CONTRACTS } from '../config/contracts';
 
 dotenv.config();
-
-// Helper to load ABI
-const loadAbi = (filename: string) => {
-    try {
-        const p = path.join(process.cwd(), 'abis', filename);
-        const content = fs.readFileSync(p, 'utf8');
-        return JSON.parse(content).abi;
-    } catch (e) {
-        console.error(`Error loading ABI ${filename}:`, e);
-        return [];
-    }
-};
-
-const ESCROW_ABI = loadAbi('EscrowPayment.json');
-const DISPUTE_ABI = loadAbi('DisputeResolution.json');
-const REGISTRY_ABI = loadAbi('AgentRegistry.json');
 
 export class BlockchainService {
     private provider: ethers.JsonRpcProvider;
@@ -33,22 +18,18 @@ export class BlockchainService {
     constructor() {
         if (!process.env.RPC_URL || !process.env.PRIVATE_KEY) {
             console.error("Missing RPC_URL or PRIVATE_KEY");
-            // Fallback for types satisfaction in dev, but robust checking needed
-            this.provider = new ethers.JsonRpcProvider('http://localhost:8545');
-            this.wallet = ethers.Wallet.createRandom().connect(this.provider);
+            // Fail fast in production, but allow mock provider for tests if needed
+            this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+            this.wallet = process.env.PRIVATE_KEY ? new ethers.Wallet(process.env.PRIVATE_KEY, this.provider) : ethers.Wallet.createRandom().connect(this.provider);
         } else {
             this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
             this.wallet = new ethers.Wallet(process.env.PRIVATE_KEY, this.provider);
         }
 
-        // Addresses should be in .env
-        const escrowAddr = process.env.ESCROW_PAYMENT_ADDRESS || '';
-        const disputeAddr = process.env.DISPUTE_RESOLUTION_ADDRESS || '';
-        const registryAddr = process.env.AGENT_REGISTRY_ADDRESS || '';
-
-        this.escrowContract = new ethers.Contract(escrowAddr, ESCROW_ABI, this.wallet);
-        this.disputeContract = new ethers.Contract(disputeAddr, DISPUTE_ABI, this.wallet);
-        this.registryContract = new ethers.Contract(registryAddr, REGISTRY_ABI, this.wallet);
+        // Use addresses from config
+        this.escrowContract = new ethers.Contract(CONTRACTS.ESCROW_PAYMENT.ADDRESS, CONTRACTS.ESCROW_PAYMENT.ABI, this.wallet);
+        this.disputeContract = new ethers.Contract(CONTRACTS.DISPUTE_RESOLUTION.ADDRESS, CONTRACTS.DISPUTE_RESOLUTION.ABI, this.wallet);
+        this.registryContract = new ethers.Contract(CONTRACTS.AGENT_REGISTRY.ADDRESS, CONTRACTS.AGENT_REGISTRY.ABI, this.wallet);
 
         this.geminiService = new GeminiService();
     }
@@ -61,7 +42,6 @@ export class BlockchainService {
 
         console.log(" Listening for 'TransactionDisputed' events on:", this.escrowContract.target);
 
-        // Listen for the event (Event signature matches contract)
         this.escrowContract.on("TransactionDisputed", async (txnId: bigint, disputer: string) => {
             console.log(` Dispute detected for Transaction ID: ${txnId.toString()} by ${disputer}`);
             await this.handleDispute(Number(txnId), disputer);
@@ -73,33 +53,51 @@ export class BlockchainService {
             console.log(`Processing dispute ${txId}...`);
 
             // 1. Fetch transaction details from Escrow contract
-            // struct Transaction { address payer; address agent; uint256 amount; ... }
             const tx = await this.escrowContract.transactions(txId);
             const agentAddress = tx.agent;
 
-            // In a real app, 'userClaim' and 'evidence' would be fetched from IPFS or DB 
-            // triggered by an off-chain API call from the user to provide context.
-            // For now, we simulate basic context.
-            const userClaim = "User claims the service was not delivered as per charter.";
+            // 2. Fetch User Claim & Context
+            // We look for an existing dispute record in DB (submitted via API)
+            // If not found, we try to fetch metadata from IPFS or use default.
+            let userClaim = "Dispute raised by user.";
+            let transactionContext = "No metadata available.";
 
-            // 2. Fetch Agent Charter from Registry
-            // struct Charter { ... }
+            const dbDispute = await DisputeRepo.findByTxId(txId);
+            if (dbDispute && dbDispute.reason) {
+                userClaim = dbDispute.reason;
+            }
+
+            if (tx.metadataURI) {
+                try {
+                    const ipfsData = await IPFSService.fetchJSON(tx.metadataURI);
+                    if (ipfsData) {
+                        transactionContext = JSON.stringify(ipfsData);
+                        // If DB didn't have claim, maybe IPFS does?
+                        if (userClaim === "Dispute raised by user." && ipfsData.claim) {
+                            userClaim = ipfsData.claim;
+                        }
+                    }
+                } catch (err) {
+                    console.error("Failed to fetch IPFS metadata:", err);
+                }
+            }
+
+            // 3. Fetch Agent Charter from Registry
             const charter = await this.registryContract.agentCharters(agentAddress);
-            const charterString = `Daily Limit: ${charter.dailySpendingLimit}, Activity: ${charter.isActive ? 'Active' : 'Inactive'}`;
+            const charterString = `Daily Limit: ${charter.dailySpendingLimit.toString()}, Activity: ${charter.isActive ? 'Active' : 'Inactive'}`;
 
-            // 3. AI Arbitration with Gemini
+            // 4. AI Arbitration with Gemini
             console.log(`Consulting Gemini for arbitration...`);
             const result = await this.geminiService.analyzeDispute({
                 txId,
                 agentCharter: charterString,
-                transactionMetadata: tx.metadataURI || "No metadata",
+                transactionMetadata: transactionContext,
                 userClaim: userClaim
             });
 
             console.log(` Arbitration Result: Refund ${result.refundPercent}%, Slash: ${result.slashAmount}`, result.reasoning);
 
-            // 4. Submit Resolution to Blockchain
-            // ensure we only call this if we are an authorized arbitrator
+            // 5. Submit Resolution to Blockchain
             const txResponse = await this.disputeContract.resolveViaAI(
                 txId,
                 result.refundPercent,
@@ -109,6 +107,9 @@ export class BlockchainService {
 
             await txResponse.wait();
             console.log(`Dispute ${txId} resolved on-chain. TX: ${txResponse.hash}`);
+
+            // Update DB Status
+            await DisputeRepo.updateStatus(txId, 'Resolved', result);
 
         } catch (error) {
             console.error(`Failed to handle dispute ${txId}:`, error);

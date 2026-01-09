@@ -6,7 +6,6 @@ export class DisputeController {
     static async getAll(req: Request, res: Response, next: NextFunction) {
         try {
             const disputes = await DisputeRepo.findPending(); 
-            // use pagination and filtering
             res.json(disputes);
         } catch (error) {
             next(error);
