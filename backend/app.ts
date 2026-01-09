@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-//santization 
+import mongoSanitize from 'express-mongo-sanitize';
 import agentRoutes from './routes/agentRoutes';
 import disputeRoutes from './routes/disputeRoutes';
 import authRoutes from './routes/authRoutes';
@@ -17,7 +17,8 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '10kb' })); // Body limit
+app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
 
 // Basic Route
 app.get('/health', (req, res) => {

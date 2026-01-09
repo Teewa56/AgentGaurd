@@ -1,25 +1,33 @@
 import { Request, Response, NextFunction } from 'express';
-import Agent from '../models/Agent';
+import { AgentRepo } from '../repositories/AgentRepo';
+import { AnalyticsService } from '../services/AnalyticsService';
+import { CacheService } from '../services/CacheService';
 import User from '../models/User';
+import { NotFoundError, ValidationError, UnauthorizedError } from '../utils/errors';
 
 export class AgentController {
     static async register(req: Request, res: Response, next: NextFunction) {
         try {
-            const { userId, address, charter, dailySpendingLimit, monthlySpendingLimit, transactionLimit } = req.body;
+            const { address, charter, dailySpendingLimit, monthlySpendingLimit, transactionLimit } = req.body;
 
-            // In a real app, userId should come from the authenticated JWT token (req.user.id)
-            // validating that the user exists
+            // Get userId from authenticated token (AuthMiddleware)
+            const userId = (req as any).user?.id;
+
+            if (!userId) {
+                throw new UnauthorizedError("User not authenticated");
+            }
+
             const user = await User.findById(userId);
             if (!user) {
-                return res.status(404).json({ message: "User not found" });
+                throw new NotFoundError("User not found");
             }
 
-            const existingAgent = await Agent.findOne({ address });
+            const existingAgent = await AgentRepo.findByAddress(address);
             if (existingAgent) {
-                return res.status(400).json({ message: "Agent address already registered" });
+                throw new ValidationError("Agent address already registered");
             }
 
-            const newAgent = new Agent({
+            const newAgent = await AgentRepo.create({
                 user: userId,
                 address,
                 charter,
@@ -28,7 +36,6 @@ export class AgentController {
                 transactionLimit
             });
 
-            await newAgent.save();
             res.status(201).json({ message: "Agent registered successfully", agent: newAgent });
         } catch (error) {
             next(error);
@@ -38,22 +45,32 @@ export class AgentController {
     static async getStats(req: Request, res: Response, next: NextFunction) {
         try {
             const { address } = req.params;
-            const agent = await Agent.findOne({ address });
 
-            if (!agent) {
-                return res.status(404).json({ message: "Agent not found" });
+            // Check cache first
+            const cached = await CacheService.get(`agent_stats_${address}`);
+            if (cached) {
+                return res.json(cached);
             }
 
-            // In the future, we can fetch real-time on-chain stats here using BlockchainService
-            // For now, return DB stats
-            res.json({
+            const agent = await AgentRepo.findByAddress(address);
+            if (!agent) {
+                throw new NotFoundError("Agent not found");
+            }
+
+            const performance = await AnalyticsService.getAgentPerformance(address);
+
+            const stats = {
                 address: agent.address,
                 isActive: agent.isActive,
                 limits: {
                     daily: agent.dailySpendingLimit,
                     monthly: agent.monthlySpendingLimit
-                }
-            });
+                },
+                performance
+            };
+
+            await CacheService.set(`agent_stats_${address}`, stats);
+            res.json(stats);
         } catch (error) {
             next(error);
         }

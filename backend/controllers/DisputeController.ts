@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
-import Dispute from '../models/Dispute';
+import { DisputeRepo } from '../repositories/DisputeRepo';
+import { NotFoundError } from '../utils/errors';
 
 export class DisputeController {
     static async getAll(req: Request, res: Response, next: NextFunction) {
         try {
-            const disputes = await Dispute.find().sort({ createdAt: -1 });
+            const disputes = await DisputeRepo.findPending(); 
+            // use pagination and filtering
             res.json(disputes);
         } catch (error) {
             next(error);
@@ -14,11 +16,10 @@ export class DisputeController {
     static async getById(req: Request, res: Response, next: NextFunction) {
         try {
             const { id } = req.params;
-            // Assuming the ID in params is the MongoDB _id, or we could search by txId
-            const dispute = await Dispute.findById(id) || await Dispute.findOne({ txId: Number(id) });
+            const dispute = await DisputeRepo.findByTxId(Number(id));
 
             if (!dispute) {
-                return res.status(404).json({ message: "Dispute not found" });
+                throw new NotFoundError("Dispute not found");
             }
             res.json(dispute);
         } catch (error) {
@@ -26,11 +27,9 @@ export class DisputeController {
         }
     }
 
-    // Optional: Creating a dispute record (if needed before on-chain event)
     static async create(req: Request, res: Response, next: NextFunction) {
         try {
-            // Implementation depends on workflow
-            res.status(501).json({ message: "Not implemented, Dispute creation primarily happens via Blockchain Event" });
+            res.status(501).json({ message: "Disputes are created via Blockchain events." });
         } catch (error) {
             next(error);
         }
