@@ -11,7 +11,46 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+'use client';
+
+import { DashboardLayout } from '@/components/DashboardLayout';
+import {
+    Shield,
+    TrendingUp,
+    AlertTriangle,
+    CheckCircle2,
+    Clock,
+    ArrowUpRight
+} from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useStats } from '@/hooks/useStats';
+import { useAgents } from '@/hooks/useAgents';
+import { useTransactions } from '@/hooks/useTransactions';
+import Link from 'next/link';
+
 export default function Dashboard() {
+    const { data: stats, isLoading: statsLoading } = useStats();
+    const { data: agents, isLoading: agentsLoading } = useAgents();
+    const { data: transactions, isLoading: txLoading } = useTransactions();
+
+    if (statsLoading || agentsLoading || txLoading) {
+        return (
+            <DashboardLayout>
+                <div className="flex items-center justify-center h-screen">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+            </DashboardLayout>
+        );
+    }
+
+    // Default to 0/empty if data fetch fails or is pending
+    const displayStats = [
+        { label: 'Total Reputation', value: stats?.totalReputation || 0, icon: Shield, color: 'text-blue-600', trend: 'Global Score' },
+        { label: 'Total Staked', value: `${stats?.totalStaked || 0} MNEE`, icon: trendingup, color: 'text-indigo-600', trend: 'Across agents' },
+        { label: 'Active Disputes', value: stats?.activeDisputes || 0, icon: alerttriangle, color: 'text-amber-600', trend: 'Requires attention' },
+        { label: 'Success Rate', value: `${stats?.successRate || 100}%`, icon: checkcircle2, color: 'text-emerald-600', trend: `from ${stats?.totalTransactions || 0} txs` },
+    ];
+
     return (
         <DashboardLayout>
             <div className="space-y-8">
@@ -22,12 +61,7 @@ export default function Dashboard() {
 
                 {/* Stats Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {[
-                        { label: 'Total Reputation', value: '742', icon: Shield, color: 'text-blue-600', trend: '+12 this week' },
-                        { label: 'Total Staked', value: '25,400 MNEE', icon: trendingup, color: 'text-indigo-600', trend: 'Required: 18k' },
-                        { label: 'Active Disputes', value: '2', icon: alerttriangle, color: 'text-amber-600', trend: '1 needing action' },
-                        { label: 'Success Rate', value: '98.4%', icon: checkcircle2, color: 'text-emerald-600', trend: 'from 240 txs' },
-                    ].map((stat, i) => (
+                    {displayStats.map((stat, i) => (
                         <motion.div
                             key={i}
                             initial={{ opacity: 0, y: 20 }}
@@ -57,41 +91,36 @@ export default function Dashboard() {
                     <div className="lg:col-span-2 space-y-6">
                         <div className="flex items-center justify-between">
                             <h2 className="text-xl font-bold">Your Active Agents</h2>
-                            <button className="text-sm font-semibold text-primary hover:underline">View all</button>
+                            <Link href="/registry" className="text-sm font-semibold text-primary hover:underline">View all</Link>
                         </div>
                         <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
                             <table className="w-full text-left">
                                 <thead className="bg-secondary/30 text-xs font-bold uppercase text-muted-foreground">
                                     <tr>
-                                        <th className="px-6 py-4">Agent Name</th>
+                                        <th className="px-6 py-4">Agent Address</th>
                                         <th className="px-6 py-4">Daily Limit</th>
-                                        <th className="px-6 py-4">Spent (24h)</th>
+                                        <th className="px-6 py-4">Spent (Monthly)</th>
                                         <th className="px-6 py-4">Status</th>
                                         <th className="px-6 py-4"></th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {[
-                                        { name: 'Procurement Bot A', limit: '500 MNEE', spent: '120 MNEE', status: 'Healthy' },
-                                        { name: 'Marketing Exec v2', limit: '2000 MNEE', spent: '1850 MNEE', status: 'Limit Near' },
-                                        { name: 'Inventory Replenisher', limit: '1000 MNEE', spent: '0 MNEE', status: 'Healthy' },
-                                    ].map((agent, i) => (
-                                        <tr key={i} className="hover:bg-secondary/10 transition-colors">
-                                            <td className="px-6 py-4 font-semibold">{agent.name}</td>
-                                            <td className="px-6 py-4 text-sm">{agent.limit}</td>
+                                    {agents?.slice(0, 5).map((agent, i) => (
+                                        <tr key={agent._id} className="hover:bg-secondary/10 transition-colors">
+                                            <td className="px-6 py-4 font-semibold text-xs font-mono">{agent.address.substring(0, 8)}...</td>
+                                            <td className="px-6 py-4 text-sm">{agent.dailySpendingLimit} MNEE</td>
                                             <td className="px-6 py-4 text-sm">
                                                 <div className="flex flex-col gap-1 w-24">
                                                     <div className="w-full bg-secondary rounded-full h-1">
-                                                        <div className={`h-1 rounded-full ${agent.status === 'Limit Near' ? 'bg-amber-500 w-[92%]' : 'bg-primary w-[24%]'}`}></div>
+                                                        <div className={`h-1 rounded-full bg-primary`} style={{ width: `${Math.min((agent.usage?.monthly / agent.monthlySpendingLimit) * 100, 100)}%` }}></div>
                                                     </div>
-                                                    <span className="text-[10px] text-muted-foreground">{agent.spent}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{agent.usage?.monthly} / {agent.monthlySpendingLimit}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${agent.status === 'Healthy' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
-                                                    }`}>
-                                                    <div className={`w-1 h-1 rounded-full ${agent.status === 'Healthy' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
-                                                    {agent.status}
+                                                <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${agent.isActive ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-700'}`}>
+                                                    <div className={`w-1 h-1 rounded-full ${agent.isActive ? 'bg-emerald-500' : 'bg-gray-500'}`}></div>
+                                                    {agent.isActive ? 'Active' : 'Inactive'}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 text-right">
@@ -101,6 +130,13 @@ export default function Dashboard() {
                                             </td>
                                         </tr>
                                     ))}
+                                    {(!agents || agents.length === 0) && (
+                                        <tr>
+                                            <td colSpan={5} className="px-6 py-8 text-center text-sm text-muted-foreground">
+                                                No agents registered yet.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>
@@ -110,25 +146,27 @@ export default function Dashboard() {
                     <div className="space-y-6">
                         <h2 className="text-xl font-bold">Recent Activity</h2>
                         <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-6">
-                            {[
-                                { type: 'settlement', title: 'Transaction Settled', desc: 'Agent: Procurement Bot A', time: '12 mins ago' },
-                                { type: 'stake', title: 'Bond Increased', desc: 'Added 500 MNEE to Marketing Exec', time: '2 hours ago' },
-                                { type: 'dispute', title: 'Dispute Filed', desc: 'User filed dispute for TX #1042', time: '5 hours ago', urgent: true },
-                                { type: 'registry', title: 'Agent Registered', desc: 'New agent "Customer Support Alpha"', time: '1 day ago' },
-                            ].map((activity, i) => (
-                                <div key={i} className="flex gap-4 relative">
-                                    {i !== 3 && <div className="absolute left-[11px] top-8 bottom-[-24px] w-0.5 bg-secondary"></div>}
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center relative z-10 ${activity.urgent ? 'bg-destructive/10' : 'bg-primary/10'
+                            {transactions?.slice(0, 5).map((activity, i) => (
+                                <div key={activity._id} className="flex gap-4 relative">
+                                    {i !== 4 && <div className="absolute left-[11px] top-8 bottom-[-24px] w-0.5 bg-secondary"></div>}
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center relative z-10 ${activity.status === 'Disputed' ? 'bg-destructive/10' : 'bg-primary/10'
                                         }`}>
-                                        <Clock className={`w-3 h-3 ${activity.urgent ? 'text-destructive' : 'text-primary'}`} />
+                                        <Clock className={`w-3 h-3 ${activity.status === 'Disputed' ? 'text-destructive' : 'text-primary'}`} />
                                     </div>
                                     <div>
-                                        <h4 className="text-sm font-bold">{activity.title}</h4>
-                                        <p className="text-xs text-muted-foreground mt-0.5">{activity.desc}</p>
-                                        <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1 block tracking-wider">{activity.time}</span>
+                                        <h4 className="text-sm font-bold">{activity.status} Transaction</h4>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            {activity.agent.substring(0, 6)}... paid {activity.to}
+                                        </p>
+                                        <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1 block tracking-wider">
+                                            {new Date(activity.timestamp).toLocaleTimeString()}
+                                        </span>
                                     </div>
                                 </div>
                             ))}
+                            {(!transactions || transactions.length === 0) && (
+                                <p className="text-sm text-center text-muted-foreground">No recent activity.</p>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -136,6 +174,11 @@ export default function Dashboard() {
         </DashboardLayout>
     );
 }
+
+// Fix for icon casing in mapping
+const trendingup = TrendingUp;
+const alerttriangle = AlertTriangle;
+const checkcircle2 = CheckCircle2;
 
 // Fix for icon casing in mapping
 const trendingup = TrendingUp;

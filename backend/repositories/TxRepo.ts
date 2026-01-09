@@ -13,4 +13,8 @@ export class TxRepo {
     static async findByAgent(agentAddress: string): Promise<ITransaction[]> {
         return await Transaction.find({ agentAddress }).sort({ createdAt: -1 });
     }
+
+    static async countAll(): Promise<number> {
+        return Transaction.countDocuments();
+    }
 }

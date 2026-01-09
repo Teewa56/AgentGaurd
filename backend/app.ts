@@ -8,6 +8,7 @@ import cookieParser from 'cookie-parser';
 import agentRoutes from './routes/agentRoutes';
 import disputeRoutes from './routes/disputeRoutes';
 import authRoutes from './routes/authRoutes';
+import analyticsRoutes from './routes/analyticsRoutes';
 import { errorHandler } from './middleware/errorHandler';
 
 dotenv.config();
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/disputes', disputeRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // Error Handler
 app.use(errorHandler);

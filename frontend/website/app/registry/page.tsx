@@ -1,17 +1,19 @@
 'use client';
 
 import { DashboardLayout } from '@/components/DashboardLayout';
-import { 
-  Zap, 
-  Info, 
-  ShieldAlert, 
+import {
+  Zap,
+  Info,
+  ShieldAlert,
   FileText,
   User,
   Activity,
-  Calendar
+  Calendar,
+  Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import api from '@/lib/api';
 
 export default function Registry() {
   const [formData, setFormData] = useState({
@@ -22,6 +24,23 @@ export default function Registry() {
     monthlyLimit: '2000',
     perTxLimit: '50'
   });
+
+  const handleSubmit = async () => {
+    try {
+      await api.post('/agents', {
+        name: formData.name, // Note: Backend handles address/charter. Name might be extra or mapped to charter metadata if needed.
+        address: formData.address,
+        charter: formData.description,
+        dailySpendingLimit: Number(formData.dailyLimit),
+        monthlySpendingLimit: Number(formData.monthlyLimit),
+        transactionLimit: Number(formData.perTxLimit)
+      });
+      alert('Agent Registered Successfully!');
+    } catch (error) {
+      console.error(error);
+      alert('Registration Failed');
+    }
+  };
 
   return (
     <DashboardLayout>
@@ -49,27 +68,33 @@ export default function Registry() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Agent Name</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="e.g. Sales Agent v1"
+                      value={formData.name}
+                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                       className="w-full bg-secondary/30 border rounded-xl py-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Agent Wallet Address</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       placeholder="0x..."
-                      className="w-full bg-secondary/30 border rounded-xl py-2 px-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all transition-all"
+                      value={formData.address}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      className="w-full bg-secondary/30 border rounded-xl py-2 px-4 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-sm font-semibold">Mission Narrative / Policy</label>
-                  <textarea 
+                  <textarea
                     rows={3}
                     placeholder="Describe the agent's purpose and trusted merchant domains..."
-                    className="w-full bg-secondary/30 border rounded-xl py-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all transition-all"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full bg-secondary/30 border rounded-xl py-2 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                   />
                 </div>
               </div>
@@ -86,9 +111,10 @@ export default function Registry() {
                       Daily Limit <Clock className="w-3 h-3 text-muted-foreground" />
                     </label>
                     <div className="relative">
-                      <input 
-                        type="number" 
-                        defaultValue="500"
+                      <input
+                        type="number"
+                        value={formData.dailyLimit}
+                        onChange={(e) => setFormData({ ...formData, dailyLimit: e.target.value })}
                         className="w-full bg-secondary/30 border rounded-xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">MNEE</span>
@@ -99,9 +125,10 @@ export default function Registry() {
                       Monthly Limit <Calendar className="w-3 h-3 text-muted-foreground" />
                     </label>
                     <div className="relative">
-                      <input 
-                        type="number" 
-                        defaultValue="2500"
+                      <input
+                        type="number"
+                        value={formData.monthlyLimit}
+                        onChange={(e) => setFormData({ ...formData, monthlyLimit: e.target.value })}
                         className="w-full bg-secondary/30 border rounded-xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">MNEE</span>
@@ -110,9 +137,10 @@ export default function Registry() {
                   <div className="space-y-1.5">
                     <label className="text-sm font-semibold">Max per Tx</label>
                     <div className="relative">
-                      <input 
-                        type="number" 
-                        defaultValue="100"
+                      <input
+                        type="number"
+                        value={formData.perTxLimit}
+                        onChange={(e) => setFormData({ ...formData, perTxLimit: e.target.value })}
                         className="w-full bg-secondary/30 border rounded-xl py-2 pl-4 pr-12 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                       />
                       <span className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-bold text-muted-foreground">MNEE</span>
@@ -122,7 +150,9 @@ export default function Registry() {
               </div>
 
               <div className="pt-4 flex flex-col sm:flex-row gap-4">
-                <button className="flex-1 px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
+                <button
+                  onClick={handleSubmit}
+                  className="flex-1 px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
                   Sign & Register Agent
                 </button>
                 <button className="px-8 py-3 bg-secondary text-foreground font-bold rounded-xl hover:bg-secondary/80 transition-all">

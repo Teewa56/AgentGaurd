@@ -18,6 +18,7 @@ export const metadata: Metadata = {
 };
 
 import { Web3Provider } from "@/components/Web3Provider";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -30,7 +31,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Web3Provider>
-          {children}
+          <AuthProvider>
+            {children}
+          </AuthProvider>
         </Web3Provider>
       </body>
     </html>

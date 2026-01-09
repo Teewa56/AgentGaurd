@@ -24,4 +24,8 @@ export class DisputeRepo {
         }
         return await Dispute.findOneAndUpdate({ txId }, updates, { new: true });
     }
+
+    static async countActive(): Promise<number> {
+        return Dispute.countDocuments({ status: { $in: ['Open', 'Arbitrating'] } });
+    }
 }
