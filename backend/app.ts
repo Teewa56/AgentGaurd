@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import mongoSanitize from 'express-mongo-sanitize';
+import cookieParser from 'cookie-parser';
 import agentRoutes from './routes/agentRoutes';
 import disputeRoutes from './routes/disputeRoutes';
 import authRoutes from './routes/authRoutes';
