@@ -85,7 +85,7 @@ export default function LandingPage() {
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-12 opacity-40 grayscale hover:grayscale-0 transition-all">
             {/* Logo Placeholders */}
-            <div className="font-black text-2xl tracking-tighter">BASE</div>
+            <div className="font-black text-2xl tracking-tighter">ETHEREUM</div>
             <div className="font-black text-2xl tracking-tighter">OPENZEPPELIN</div>
             <div className="font-black text-2xl tracking-tighter">GEMINI</div>
             <div className="font-black text-2xl tracking-tighter">MNEE</div>
