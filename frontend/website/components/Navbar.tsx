@@ -16,22 +16,7 @@ export function Navbar() {
                 </Link>
             </div>
 
-            <div className="flex-1 max-w-xl px-12 hidden md:block">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                    <input
-                        type="text"
-                        placeholder="Search agents, transactions, or disputes..."
-                        className="w-full bg-secondary/50 border rounded-full py-1.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                    />
-                </div>
-            </div>
-
             <div className="flex items-center gap-4">
-                <button className="p-2 hover:bg-secondary rounded-full relative transition-colors">
-                    <Bell className="w-5 h-5 text-muted-foreground" />
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-destructive rounded-full border-2 border-white"></span>
-                </button>
                 <ConnectButton showBalance={false} chainStatus="icon" accountStatus="avatar" />
             </div>
         </nav>
