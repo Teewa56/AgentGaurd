@@ -7,7 +7,7 @@ import { connectRedis } from './config/redis';
 
 dotenv.config();
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 
 const server = http.createServer(app);
 
