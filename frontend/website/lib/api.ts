@@ -4,7 +4,7 @@ import Cookies from 'js-cookie';
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const api = axios.create({
-    baseURL: API_URL,
+    baseURL: `${API_URL}/api`,
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const { data } = await api.post('/auth/refresh');
+                const { data } = await api.post(`${API_URL}/auth/refresh`);
 
                 Cookies.set('accessToken', data.accessToken, { secure: true, sameSite: 'strict' });
 
