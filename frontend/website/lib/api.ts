@@ -8,6 +8,7 @@ const api = axios.create({
     withCredentials: true,
     headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Cookies.get('accessToken')}`,
     },
 });
 
@@ -31,7 +32,7 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const { data } = await api.post(`${API_URL}/auth/refresh`);
+                const { data } = await api.post(`${API_URL}/api/auth/refresh`);
 
                 Cookies.set('accessToken', data.accessToken, { secure: true, sameSite: 'strict' });
 
