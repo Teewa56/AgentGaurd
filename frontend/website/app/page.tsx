@@ -10,7 +10,13 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 
+import { useAuth } from '@/context/AuthContext';
+import { useAccount } from 'wagmi';
+
 export default function LandingPage() {
+  const { isConnected } = useAccount();
+  const { isAuthenticated } = useAuth();
+
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
@@ -35,9 +41,17 @@ export default function LandingPage() {
                 AgentGuard provides the economic verification and insurance layer needed for autonomous agents to transact safely on-chain.
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link href="/auth/login" className="w-full sm:w-auto px-8 py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
-                  Launch Dashboard <ArrowRight className="w-5 h-5" />
-                </Link>
+                {isConnected && (
+                  isAuthenticated ? (
+                    <Link href="/dashboard" className="w-full sm:w-auto px-8 py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                      Launch Dashboard <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  ) : (
+                    <Link href="/auth/login" className="w-full sm:w-auto px-8 py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/25 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                      Log in <ArrowRight className="w-5 h-5" />
+                    </Link>
+                  )
+                )}
               </div>
             </motion.div>
           </div>
