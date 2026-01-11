@@ -19,8 +19,10 @@ const app = express();
 // Middleware
 app.use(helmet());
 app.use(cors({
+    credentials: true,
     origin: SECURITY_CONFIG.CORS_ORIGIN,
-    methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH']
+    methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10kb' })); // Body limit
