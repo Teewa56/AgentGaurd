@@ -10,6 +10,7 @@ import disputeRoutes from './routes/disputeRoutes';
 import authRoutes from './routes/authRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import { errorHandler } from './middleware/errorHandler';
+import { SECURITY_CONFIG } from './config/security';
 
 dotenv.config();
 
@@ -17,11 +18,16 @@ const app = express();
 
 // Middleware
 app.use(helmet());
-app.use(cors());
+app.use(cors({
+    origin: SECURITY_CONFIG.CORS_ORIGIN,
+    methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH']
+}));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10kb' })); // Body limit
 app.use(cookieParser());
 app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
+
+app.set('trust proxy', 1);
 
 // Basic Route
 app.get('/health', (req, res) => {
