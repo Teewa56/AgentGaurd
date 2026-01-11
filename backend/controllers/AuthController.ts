@@ -17,7 +17,7 @@ export class AuthController {
                 return res.status(400).json({ message: "User already exists" });
             }
 
-            const salt = await bcrypt.genSalt(SECURITY_CONFIG.BCRYPT_SALT_ROUNDS);
+            const salt = await bcrypt.genSalt(parseInt(SECURITY_CONFIG.BCRYPT_SALT_ROUNDS));
             const passwordHash = await bcrypt.hash(password, salt);
 
             const newUser = new User({
