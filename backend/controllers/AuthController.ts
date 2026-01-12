@@ -64,8 +64,8 @@ export class AuthController {
 
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
+                secure: true, // Always true for SameSite=None
+                sameSite: 'none',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
 
@@ -86,10 +86,8 @@ export class AuthController {
                 throw new UnauthorizedError("Refresh token missing");
             }
 
-            jwt.verify(refreshToken, SECURITY_CONFIG.JWT_REFRESH_SECRET, (err: any, decoded: any) => {
-                if (err) {
-                    throw new UnauthorizedError("Invalid refresh token");
-                }
+            try {
+                const decoded: any = jwt.verify(refreshToken, SECURITY_CONFIG.JWT_REFRESH_SECRET);
 
                 // Generate new Access Token
                 const accessToken = jwt.sign(
@@ -99,7 +97,27 @@ export class AuthController {
                 );
 
                 res.json({ accessToken });
+            } catch (err) {
+                throw new UnauthorizedError("Invalid refresh token");
+            }
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async logout(req: Request, res: Response, next: NextFunction) {
+        try {
+            res.clearCookie('refreshToken', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
             });
+            res.clearCookie('accessToken', {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none'
+            });
+            res.json({ message: "Logged out successfully" });
         } catch (error) {
             next(error);
         }
