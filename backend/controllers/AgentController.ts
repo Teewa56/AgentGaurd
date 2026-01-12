@@ -73,4 +73,33 @@ export class AgentController {
             next(error);
         }
     }
+    static async getAll(req: Request, res: Response, next: NextFunction) {
+        try {
+            const userId = (req as any).user?.id;
+            if (!userId) {
+                throw new UnauthorizedError("User not authenticated");
+            }
+
+            const agents = await AgentRepo.findByUserId(userId);
+            res.json(agents);
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    static async update(req: Request, res: Response, next: NextFunction) {
+        try {
+            const { address } = req.params;
+            const updates = req.body;
+
+            const agent = await AgentRepo.updateStats(address, updates);
+            if (!agent) {
+                throw new NotFoundError("Agent not found");
+            }
+
+            res.json(agent);
+        } catch (error) {
+            next(error);
+        }
+    }
 }

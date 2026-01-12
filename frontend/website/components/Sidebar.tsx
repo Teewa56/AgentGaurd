@@ -22,6 +22,7 @@ const navItems = [
     { label: 'Overview', icon: LayoutDashboard, href: '/dashboard' },
     { label: 'Register Agent', icon: UserPlus, href: '/registry' },
     { label: 'Transactions', icon: History, href: '/transactions' },
+    { label: 'Simulate', icon: ShieldCheck, href: '/simulate' },
     { label: 'Disputes', icon: Gavel, href: '/disputes' },
     { label: 'Insurance Pool', icon: ShieldCheck, href: '/insurance' },
 ];

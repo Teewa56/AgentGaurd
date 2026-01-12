@@ -12,10 +12,16 @@ import {
   Clock
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import api from '@/lib/api';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { AGENT_REGISTRY_ADDRESS, AGENT_REGISTRY_ABI } from '@/lib/contracts';
+import { parseEther } from 'viem';
 
 export default function Registry() {
+  const { writeContract, data: hash, isPending: isTxPending } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash });
+
   const [formData, setFormData] = useState({
     name: '',
     address: '',
@@ -27,20 +33,57 @@ export default function Registry() {
 
   const handleSubmit = async () => {
     try {
-      await api.post('/agents', {
-        name: formData.name, 
-        address: formData.address,
-        charter: formData.description,
-        dailySpendingLimit: Number(formData.dailyLimit),
-        monthlySpendingLimit: Number(formData.monthlyLimit),
-        transactionLimit: Number(formData.perTxLimit)
+      if (!formData.address || !formData.name) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
+      // 1. Trigger On-chain Registration
+      writeContract({
+        address: AGENT_REGISTRY_ADDRESS as `0x${string}`,
+        abi: AGENT_REGISTRY_ABI,
+        functionName: 'registerAgent',
+        args: [
+          formData.address as `0x${string}`,
+          BigInt(parseEther(formData.perTxLimit)),
+          BigInt(parseEther(formData.monthlyLimit)),
+          BigInt(parseEther(formData.dailyLimit))
+        ],
       });
-      alert('Agent Registered Successfully!');
+
+      // The backend listener will pick up the 'AgentRegistered' event 
+      // and create the database entry automatically.
+
     } catch (error) {
       console.error(error);
       alert('Registration Failed');
     }
   };
+
+  useEffect(() => {
+    if (isConfirmed) {
+      // Enrich with metadata (Name/Description)
+      api.patch(`/agents/${formData.address}`, {
+        name: formData.name,
+        charter: formData.description
+      })
+        .then(() => {
+          alert('Agent Registered and Metadata Synced!');
+          setFormData({
+            name: '',
+            address: '',
+            description: '',
+            dailyLimit: '100',
+            monthlyLimit: '2000',
+            perTxLimit: '50'
+          });
+        })
+        .catch((err) => {
+          console.error("Metadata sync failed:", err);
+          alert('Agent Registered on-chain, but metadata sync failed. You can update it in settings.');
+        });
+    }
+  }, [isConfirmed]);
 
   return (
     <DashboardLayout>
@@ -152,8 +195,9 @@ export default function Registry() {
               <div className="pt-4 flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={handleSubmit}
-                  className="flex-1 px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all">
-                  Sign & Register Agent
+                  disabled={isTxPending || isConfirming}
+                  className="flex-1 px-8 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50 disabled:scale-100">
+                  {isTxPending ? 'Signing...' : isConfirming ? 'Confirming...' : 'Sign & Register Agent'}
                 </button>
                 <button className="px-8 py-3 bg-secondary text-foreground font-bold rounded-xl hover:bg-secondary/80 transition-all">
                   Save Draft

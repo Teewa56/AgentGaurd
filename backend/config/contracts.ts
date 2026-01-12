@@ -31,5 +31,9 @@ export const CONTRACTS = {
     INSURANCE_POOL: {
         ADDRESS: process.env.INSURANCE_POOL_ADDRESS || '',
         ABI: loadAbi('InsurancePool.json')
+    },
+    REPUTATION_BOND: {
+        ADDRESS: process.env.REPUTATION_BOND_ADDRESS || '',
+        ABI: loadAbi('ReputationBond.json')
     }
 };

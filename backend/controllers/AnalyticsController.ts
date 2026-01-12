@@ -7,7 +7,7 @@ import { CacheService } from '../services/CacheService';
 export class AnalyticsController {
     static async getDashboardStats(req: Request, res: Response, next: NextFunction) {
         try {
-            const userId = req.user?.id;
+            const userId = (req as any).user?.id;
             const cached = await CacheService.get(`dashboard_stats_${userId}`);
             if (cached) {
                 return res.json(cached);
@@ -26,17 +26,24 @@ export class AnalyticsController {
             // 3. Active Disputes
             const activeDisputes = await DisputeRepo.countActive();
 
-            // 4. Total Staked 
+            // 4. Total Staked (Real data from MongoDB synced from chain)
             const agents = await AgentRepo.findAll();
-            const totalDailyLimit = agents.reduce((sum, agent) => sum + (agent.dailySpendingLimit || 0), 0);
-            const totalStaked = (totalDailyLimit * 0.5).toLocaleString(); // Assume 50% collateral ratio requirement
+            const totalStakedSum = agents.reduce((sum, agent) => {
+                try {
+                    return sum + Number(agent.stakedMnee || 0) / 1e18; // Simple conversion for display
+                } catch {
+                    return sum;
+                }
+            }, 0);
 
-            // 5. Total Reputation (Derived from Performance)
-            const reputationScore = 500 + (completedTransactions * 10) - (disputedTransactions * 50);
+            // 5. Average Reputation
+            const avgReputation = agents.length > 0
+                ? agents.reduce((sum, a) => sum + (a.reputation || 0), 0) / agents.length
+                : 500;
 
             const stats = {
-                totalReputation: Math.max(0, reputationScore),
-                totalStaked: totalStaked,
+                totalReputation: Math.round(avgReputation),
+                totalStaked: totalStakedSum.toLocaleString(),
                 activeDisputes,
                 successRate: Number(successRate),
                 totalTransactions

@@ -5,6 +5,7 @@ export interface Agent {
     _id: string;
     userId: string;
     address: string;
+    name: string;
     charter: string;
     dailySpendingLimit: number;
     monthlySpendingLimit: number;
@@ -14,6 +15,8 @@ export interface Agent {
         monthly: number;
     };
     isActive: boolean;
+    stakedMnee: string;
+    reputation: number;
     createdAt: string;
 }
 

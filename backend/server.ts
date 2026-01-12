@@ -27,7 +27,7 @@ async function startServer() {
         // 3. Blockchain Service
         if (process.env.PRIVATE_KEY && process.env.ESCROW_PAYMENT_ADDRESS) {
             const blockchainService = new BlockchainService();
-            await blockchainService.listenForDisputes();
+            await blockchainService.listenForEvents();
         } else {
             console.warn(" Blockchain service NOT initialized: Missing environment variables.");
         }
