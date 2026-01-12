@@ -53,23 +53,6 @@ export function Sidebar() {
                 })}
             </div>
 
-            <div className="mt-auto space-y-1 pt-4 border-t">
-                <Link
-                    href="/settings"
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
-                >
-                    <Settings className="w-4 h-4" />
-                    Settings
-                </Link>
-                <Link
-                    href="/help"
-                    className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-muted-foreground hover:bg-secondary hover:text-foreground transition-all"
-                >
-                    <HelpCircle className="w-4 h-4" />
-                    Help Center
-                </Link>
-            </div>
-
             <div className="mt-6 p-4 rounded-xl bg-primary/5 border border-primary/10">
                 <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-2">Protocol Health</p>
                 <div className="flex items-center gap-2 mb-1">
