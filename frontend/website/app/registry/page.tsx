@@ -62,12 +62,16 @@ export default function Registry() {
 
   useEffect(() => {
     if (isConfirmed) {
-      // Enrich with metadata (Name/Description)
-      api.patch(`/agents/${formData.address}`, {
-        name: formData.name,
-        charter: formData.description
-      })
-        .then(() => {
+      const syncMetadata = async (retryCount = 0) => {
+        try {
+          // Small delay to allow blockchain listener to process event
+          if (retryCount === 0) await new Promise(r => setTimeout(r, 1500));
+
+          await api.patch(`/agents/${formData.address}`, {
+            name: formData.name,
+            charter: formData.description
+          });
+
           alert('Agent Registered and Metadata Synced!');
           setFormData({
             name: '',
@@ -77,11 +81,18 @@ export default function Registry() {
             monthlyLimit: '2000',
             perTxLimit: '50'
           });
-        })
-        .catch((err) => {
-          console.error("Metadata sync failed:", err);
-          alert('Agent Registered on-chain, but metadata sync failed. You can update it in settings.');
-        });
+        } catch (err) {
+          if (retryCount < 1) {
+            console.log("Retrying metadata sync...");
+            setTimeout(() => syncMetadata(retryCount + 1), 2000);
+          } else {
+            console.error("Metadata sync failed:", err);
+            alert('Agent Registered on-chain, but metadata sync failed. You can update it in settings.');
+          }
+        }
+      };
+
+      syncMetadata();
     }
   }, [isConfirmed]);
 

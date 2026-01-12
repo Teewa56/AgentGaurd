@@ -1,6 +1,9 @@
 # AgentGuard
 The trust and insurance layer for AI agent commerce—making agent transactions safer than human purchases through bonded reputation, instant dispute resolution, and zero merchant chargeback risk.
 
+> [!TIP]
+> **Looking for technical setup instructions?** Check out the [Technical README](technical_readme.md).
+
 ## Table of Contents
 1. [The Problem](#the-problem)
 2. [The Solution](#the-solution)

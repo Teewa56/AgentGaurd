@@ -91,11 +91,15 @@ export class AgentController {
         try {
             const { address } = req.params;
             const updates = req.body;
+            const userId = (req as any).user?.id;
 
-            const agent = await AgentRepo.updateStats(address, updates);
-            if (!agent) {
-                throw new NotFoundError("Agent not found");
-            }
+            // Use AgentRepo.create (which is an upsert) to handle race conditions
+            // between on-chain event listener and frontend metadata sync.
+            const agent = await AgentRepo.create({
+                address,
+                ...updates,
+                user: userId
+            });
 
             res.json(agent);
         } catch (error) {
