@@ -35,33 +35,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     useEffect(() => {
         const initAuth = async () => {
             const token = Cookies.get('accessToken');
-            const storedUser = localStorage.getItem('agentguard_user');
+            const user = Cookies.get('user');
 
-            if (token && storedUser) {
+            if (token) {
                 try {
-                    setUser(JSON.parse(storedUser));
+                    user ? setUser(JSON.parse(user)) : setUser(null);
                 } catch (e) {
                     console.error("Failed to parse user data", e);
                     Cookies.remove('accessToken');
-                    localStorage.removeItem('agentguard_user');
                 }
             }
             setLoading(false);
         };
 
-        initAuth();
+        initAuth(); 
     }, []);
 
     const login = (token: string, userData: User) => {
-        Cookies.set('accessToken', token, { secure: true, sameSite: 'strict', expires: 1 }); // 1 day fallback
-        localStorage.setItem('agentguard_user', JSON.stringify(userData));
+        Cookies.set('accessToken', token, { secure: true, sameSite: 'strict', expires: 1 });
+        Cookies.set('user', JSON.stringify(userData), { secure: true, sameSite: 'strict', expires: 7 });
         setUser(userData);
         router.push('/dashboard');
     };
 
     const logout = () => {
         Cookies.remove('accessToken');
-        localStorage.removeItem('agentguard_user');
         setUser(null);
         router.push('/auth/login');
     };
