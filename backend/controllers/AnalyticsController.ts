@@ -26,8 +26,8 @@ export class AnalyticsController {
             // 3. Active Disputes
             const activeDisputes = await DisputeRepo.countActive();
 
-            // 4. Total Staked (Real data from MongoDB synced from chain)
-            const agents = await AgentRepo.findAll();
+            // 4. User-Specific Stats (Real data from MongoDB synced from chain)
+            const agents = await AgentRepo.findByUserId(userId);
             const totalStakedSum = agents.reduce((sum, agent) => {
                 try {
                     return sum + Number(agent.stakedMnee || 0) / 1e18; // Simple conversion for display

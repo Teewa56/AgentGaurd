@@ -34,7 +34,7 @@ api.interceptors.response.use(
             try {
                 const { data } = await api.post(`/auth/refresh`);
 
-                Cookies.set('accessToken', data.accessToken, { secure: true, sameSite: 'strict' });
+                Cookies.set('accessToken', data.accessToken, { secure: true, sameSite: 'none' });
 
                 originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
                 return api(originalRequest);

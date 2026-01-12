@@ -8,15 +8,17 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers['Authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    const token = typeof authHeader === 'string' && authHeader.split(' ')[1];
 
     if (!token) {
+        console.error(`[Auth] No token provided. Headers: ${JSON.stringify(req.headers)}`);
         return next(new UnauthorizedError('No token provided'));
     }
 
-    jwt.verify(token, SECURITY_CONFIG.JWT_SECRET, (err: any, user: any) => {
+    jwt.verify(token, SECURITY_CONFIG.JWT_SECRET as string, (err: any, user: any) => {
         if (err) {
+            console.error(`[Auth] Token verification failed: ${err.message}`);
             return next(new UnauthorizedError('Invalid token'));
         }
         req.user = user;

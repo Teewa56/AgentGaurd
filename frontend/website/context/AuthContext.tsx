@@ -48,12 +48,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             setLoading(false);
         };
 
-        initAuth(); 
+        initAuth();
     }, []);
 
     const login = (token: string, userData: User) => {
-        Cookies.set('accessToken', token, { secure: true, sameSite: 'strict', expires: 1 });
-        Cookies.set('user', JSON.stringify(userData), { secure: true, sameSite: 'strict', expires: 7 });
+        Cookies.set('accessToken', token, { secure: true, sameSite: 'none', expires: 1 });
+        Cookies.set('user', JSON.stringify(userData), { secure: true, sameSite: 'none', expires: 7 });
         setUser(userData);
         router.push('/dashboard');
     };

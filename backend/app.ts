@@ -9,6 +9,7 @@ import agentRoutes from './routes/agentRoutes';
 import disputeRoutes from './routes/disputeRoutes';
 import authRoutes from './routes/authRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
+import transactionRoutes from './routes/transactionRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { SECURITY_CONFIG } from './config/security';
 
@@ -41,6 +42,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/transactions', transactionRoutes);
 
 // Error Handler
 app.use(errorHandler);

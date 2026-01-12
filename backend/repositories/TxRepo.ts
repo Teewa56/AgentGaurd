@@ -21,4 +21,11 @@ export class TxRepo {
     static async countByStatus(status: 'Initiated' | 'Completed' | 'Disputed' | 'Refunded'): Promise<number> {
         return Transaction.countDocuments({ status });
     }
+
+    static async findAll(filters: { agentAddress?: string; status?: string } = {}): Promise<ITransaction[]> {
+        const query: any = {};
+        if (filters.agentAddress) query.agentAddress = filters.agentAddress;
+        if (filters.status) query.status = filters.status;
+        return await Transaction.find(query).sort({ createdAt: -1 });
+    }
 }
