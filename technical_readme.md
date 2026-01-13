@@ -1,6 +1,6 @@
 # AgentGuard Technical Documentation
 
-This guide provides step-by-step instructions for setting up and running the AgentGuard ecosystem locally.
+This guide provides step-by-step instructions for setting up and running the AgentGuard ecosystem locally, along with core conceptual information.
 
 ## Project Structure
 - **/contract**: Solidity smart contracts and Foundry setup.
@@ -19,125 +19,76 @@ Ensure you have the following installed:
 
 ---
 
-## 2. Smart Contract Setup
-The contracts manage agent identity, reputation bonds, and escrow payments.
+## 2. Core Concepts & Architecture
 
-1. Navigate to the contract directory:
-   ```bash
-   cd contract
-   ```
-2. Install dependencies:
-   ```bash
-   forge install
-   ```
-3. Build the contracts:
-   ```bash
-   forge build
-   ```
-4. Run tests:
-   ```bash
-   forge test
-   ```
+### Agent Identity (The Wallet Address)
+The **Agent Wallet Address** you input during registration serves as the agent's **Digital Passport**. 
+
+- **Authorization (The Corporate Card)**: By registering an address, the **Owner** (User) is authorizing that specific wallet to spend MNEE on their behalf. The `EscrowPayment` smart contract checks this authorization record before releasing funds.
+- **Spending Boundaries**: The "Charter" (limits) are cryptographically tied to this address. If the agent address attempts a transaction that exceeds these limits, the contract rejects it automatically.
+- **Reputation (DID)**: Every transaction, settlement, and dispute is logged against this address, building a persistent "Reputation Score" over time.
+
+### How the AI uses the Wallet (The Secret Sauce)
+A "Real-world" autonomous agent is typically a Python or Node.js service running on a server (e.g., an AutoGPT instance or a custom trading bot).
+- **Private Key Access**: To act autonomously, the AI service is provided with the **Private Key** of the **Agent Wallet Address** (the one you registered).
+- **Autonomy**: This allows the AI to sign transaction requests (e.g., purchasing compute credits or API access) without human intervention.
+- **User-Agent Link**: The smart contract links the **Agent Address** to the **User Wallet Address**. When the agent signs a transaction, the contract essentially says: *"I see this is Agent X, who belongs to User Y, and User Y has authorized Agent X to spend up to $Z."*
+- **Security Separation**: The AI **never** has access to the User's primary private key. It only holds the key for its authorized "Agent Wallet," meaning even if the AI is compromised, the damage is strictly capped by the daily/monthly limits defined in its on-chain charter.
 
 ---
 
-## 3. Backend Setup
-The backend handles AI arbitration logic and synchronizes on-chain events with the database.
+## 3. How Agent-Wallet Connection Enables Insurance
 
-1. Navigate to the backend directory:
-   ```bash
-   cd backend
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Configure environment variables:
-   ```bash
-   cp .env.example .env
-   ```
-   *Fill in your RPC URL, Private Key, MongoDB URL, Redis URL, and Gemini API Key.*
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+The insurance mechanism works because the agent's bond is locked in a smart contract. When a transaction occurs:
+1. **Verification**: The contract checks if the agent is authorized by the owner and within its limits.
+2. **Locking**: A portion of the agent's bonded MNEE is locked as collateral.
+3. **Dispute**: If a dispute occurs and the agent is at fault (policy violation), the smart contract slashes the **Agent's Bond** to refund the user. The merchant is protected because the refund comes from the agent's stake, not the merchant's account.
 
 ---
 
-## 4. Frontend Setup
-The dashboard provides a user interface for agent registration and transaction monitoring.
+## 4. Setup Instructions
 
-1. Navigate to the frontend directory:
-   ```bash
-   cd frontend/website
-   ```
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-3. Configure environment variables:
-   Create a `.env` file and add:
-   ```env
-   NEXT_PUBLIC_API_URL=http://localhost:3001
-   ```
-4. Start the development server:
-   ```bash
-   npm run dev
-   ```
+### Smart Contract Setup
+1. Navigate to `contract/`.
+2. Run `forge install`, then `forge build`.
+3. Use `forge test` to verify logic.
+
+### Backend Setup
+1. Navigate to `backend/`.
+2. Run `npm install`.
+3. Configure `.env` with RPC URL, Private Key, MongoDB URL, and Gemini API Key.
+4. Run `npm run dev` to start the server (Port 5000/3001).
+
+### Frontend Setup
+1. Navigate to `frontend/website/`.
+2. Run `npm install`.
+3. Configure `.env` with `NEXT_PUBLIC_API_URL`.
+4. Run `npm run dev` to start the dashboard (Port 3000).
 
 ---
 
-## 5. Running the Full System
-1. **Start MongoDB and Redis** (e.g., via Docker or local services).
-2. **Launch Backend**: `npm run dev` (Runs on port 3001).
-3. **Launch Frontend**: `npm run dev` (Runs on port 3000).
-4. **Connect Wallet**: Ensure your wallet is connected to **Base Sepolia** (or your target network).
+## 5. Testing & Registration Data
+Use this data to test a new agent registration on the **Registry** page:
+
+| Field | Value |
+| :--- | :--- |
+| **Agent Name** | `AutoProcure-v1` |
+| **Agent Address** | *[Enter a secondary test wallet address - the one your AI will use]* |
+| **Authorization Charter** | `Autonomous procurement agent for marketing SaaS tools. Authorized to spend up to 2000 MNEE monthly on verified services within specified daily limits.` |
+| **Daily Limit** | `200 MNEE` |
+| **Monthly Limit** | `2000 MNEE` |
+| **Per Transaction Limit**| `100 MNEE` |
+
+### Steps to Register:
+1. **Switch Network**: Ensure MetaMask is on **Base Sepolia**.
+2. **Connect Owner**: Connect with the wallet that holds the MNEE (the "Bank").
+3. **Submit**: Navigate to **Registry** in the sidebar, fill the form, and click **Sign & Register Agent**.
+4. **Confirm**: Approve the transaction. The backend will sync the metadata once confirmed.
+5. **Simulate (Acting as Agent)**: Switch your MetaMask to the **Agent Wallet Address** you just registered, then go to the **Simulate** page to initiate a purchase as the agent.
 
 ---
 
-## Troubleshooting
-- **401 Unauthorized**: Ensure your `CORS_ORIGIN` in the backend `.env` matches your frontend URL (e.g., `http://localhost:3000`).
-- **Chain Sync**: The backend `BlockchainService` must be running to capture on-chain events like `AgentRegistered`.
-- **Gas**: Ensure your test wallet has Sepolia ETH.
-
-
-## 6. Deployment
-
-1. **Backend**: Deploy the backend to a server or cloud platform (e.g., Heroku, Vercel).
-2. **Frontend**: Deploy the frontend to a static hosting service (e.g., Vercel, GitHub Pages).
-
----
-
-## 7. Maintenance
-Regularly update dependencies and monitor for security vulnerabilities.
-
----
-
-## 8. Support
-For issues or questions, please contact [support@agentguard.io](mailto:ogunodemarvellous@gmail.com).
-
----
-
-## 9. License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-
-# Testing
-1. New Agent Registration Data
-Use this data to register your new agent on the Registry page:
-
-Field	Value
-Agent Name	AutoProcure-v1
-Agent Address	[Enter a secondary test wallet address here]
-Authorization Charter	Autonomous procurement agent for marketing SaaS tools. Authorized to spend up to 2000 MNEE monthly on verified services within specified daily limits.
-Daily Limit	200 MNEE
-Monthly Limit	2000 MNEE
-Per Transaction Limit	100 MNEE
-
-#Steps to Register:
-
-Switch Network: Ensure your wallet (MetaMask) is on Base Sepolia.
-Fill Form: Navigate to Registry in the sidebar and paste the values above.
-Submit: Click Sign & Register Agent. This will trigger an on-chain transaction.
-Confirm: Approve the transaction in your wallet.
-Sync: Wait a few seconds for confirmation. The backend will automatically sync the data to your dashboard.
+## 6. Maintenance & Deployment
+- Deployment: Backend (Render), Frontend (Vercel).
+- Support: [support@agentguard.io](mailto:ogunodemarvellous@gmail.com).
+- License: MIT.
