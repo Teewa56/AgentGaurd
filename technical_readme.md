@@ -6,7 +6,7 @@ This guide provides step-by-step instructions for setting up and running the Age
 - **/contract**: Solidity smart contracts and Foundry setup.
 - **/backend**: Express.js server, MongoDB models, and Blockchain listeners.
 - **/frontend/website**: Next.js dashboard and user interface.
-
+- **/dev-sdk and /nonDev-cli(later)**: Tools for devs to integrate into their agents(like stripe for agent payments) and cli tool for non technical people(end users) to easily create agents that do tasks and make trusted and insured payments for the services the agents help make payments for and services the agents consume/use. This is not part of the MVP.
 ---
 
 ## 1. Prerequisites
@@ -33,13 +33,14 @@ Ensure you have the following installed:
 3. `EscrowPayment.sol` - Payment locking, release, dispute handling
 4. `DisputeResolution.sol` - Arbitration logic, DAO voting
 5. `InsurancePool.sol` - Pool management, payout distribution
+6. `MockERC20.sol` - Mock MNEE token on base sepolia
 
 ### Backend Services
 - **Node.js + Express** - API server for agent interactions
 - **MongoDB** - Transaction history, analytics, metadata
 - **IPFS (via Pinata )** - Decentralized evidence storage
 - **Redis** - Caching, rate limiting, session management
-- **LLM API** - AI arbitration and dispute analysis
+- **Gemini API** - AI arbitration and dispute analysis
 
 ### Frontend
 - **Next.js** - Web application framework
@@ -53,17 +54,14 @@ Ensure you have the following installed:
 - **Alchemy** - Ethereum RPC provider
 - **Ethers.js** - Blockchain interactions
 - **The Graph** - Indexing and querying on-chain data
-- **MNEE Token Contract** - 0x8ccedbAe4916b79da7F3F612EfB2EB93A2bFD6cF (Ethereum)
+- **Mock MNEE Token Contract** - deployed address of the mock MNEE contract on *Base Sepolia Testnet*
 
 ### DevOps & Monitoring
 - **Vercel** - Frontend hosting
 - **Render** - Backend hosting
-- **Tenderly** - Smart contract monitoring and debugging
-- **Sentry** - Error tracking
-- **GitHub Actions** - CI/CD pipeline
+- **Base Scan** - Blockchain 
 
 ---
-
 
 ### Architecture
 ```mermaid
@@ -101,7 +99,7 @@ graph TB
     end
 
     subgraph "External Services"
-        LLM[LLM API<br/>AI Arbitration]
+        Gemini[Gemini API<br/>AI Arbitration]
         ALCHEMY[Alchemy/Infura<br/>RPC Provider]
         ETHERSCAN[Etherscan API<br/>Verification]
     end
