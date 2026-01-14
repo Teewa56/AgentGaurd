@@ -39,7 +39,7 @@ export default function Login() {
                         Access your AgentGuard dashboard
                     </p>
                 </div>
-                <div>
+                <div className='p-2 bg-blue-500 text-xs font-bold rounded-lg'>
                     {isConnected ? (<p>You are signing in with {address}, ensure this is the wallet you registered with</p>) : (<p>Connect a wallet before you login</p>)}
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
