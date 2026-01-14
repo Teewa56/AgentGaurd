@@ -19,6 +19,130 @@ Ensure you have the following installed:
 
 ---
 
+## Technology Stack
+
+### Smart Contracts (Ethereum)
+- **Solidity 0.8.20** - Core contract language
+- **OpenZeppelin Contracts** - Security standards and escrow templates
+- **Foundry** - Development framework, testing, deployment
+- **Chainlink** - Price oracles for USD/MNEE conversion
+
+**Contracts:**
+1. `AgentRegistry.sol` - Agent identity and charter management
+2. `ReputationBond.sol` - Staking, bond management, reputation scoring
+3. `EscrowPayment.sol` - Payment locking, release, dispute handling
+4. `DisputeResolution.sol` - Arbitration logic, DAO voting
+5. `InsurancePool.sol` - Pool management, payout distribution
+
+### Backend Services
+- **Node.js + Express** - API server for agent interactions
+- **MongoDB** - Transaction history, analytics, metadata
+- **IPFS (via Pinata )** - Decentralized evidence storage
+- **Redis** - Caching, rate limiting, session management
+- **LLM API** - AI arbitration and dispute analysis
+
+### Frontend
+- **Next.js** - Web application framework
+- **Tailwind CSS** - Styling and UI components
+- **wagmi + viem** - Ethereum wallet connections
+- **RainbowKit** - Wallet connection UI
+- **Recharts** - Analytics and visualization
+- **React Query** - Data fetching and state management
+
+### Blockchain Infrastructure
+- **Alchemy** - Ethereum RPC provider
+- **Ethers.js** - Blockchain interactions
+- **The Graph** - Indexing and querying on-chain data
+- **MNEE Token Contract** - 0x8ccedbAe4916b79da7F3F612EfB2EB93A2bFD6cF (Ethereum)
+
+### DevOps & Monitoring
+- **Vercel** - Frontend hosting
+- **Render** - Backend hosting
+- **Tenderly** - Smart contract monitoring and debugging
+- **Sentry** - Error tracking
+- **GitHub Actions** - CI/CD pipeline
+
+---
+
+
+### Architecture
+```mermaid
+graph TB
+    subgraph "Frontend Layer"
+        UI[React Dashboard]
+        WC[Wallet Connect/RainbowKit]
+        SDK[Agent SDK]
+    end
+
+    subgraph "Backend Services Layer"
+        API[Express API Server]
+        ARB[AI Arbitration Service]
+        NOTIF[Notification Service]
+        ANALYTICS[Analytics Engine]
+    end
+
+    subgraph "Data Layer"
+        MD[(MongoDB)]
+        REDIS[(Redis Cache)]
+        IPFS[IPFS/Pinata<br/>Evidence Vault]
+    end
+
+    subgraph "Blockchain Layer - Ethereum"
+        MNEE[MNEE Token<br/>0x8cce...FD6cF]
+        
+        subgraph "AgentGuard Smart Contracts"
+            REG[AgentRegistry<br/>Identity & Charter]
+            BOND[ReputationBond<br/>Staking & Scoring]
+            ESC[EscrowPayment<br/>Tx Management]
+            DISP[DisputeResolution<br/>Arbitration]
+            POOL[InsurancePool<br/>Fund Management]
+            GOV[DAOGovernance<br/>Voting & Params]
+        end
+    end
+
+    subgraph "External Services"
+        LLM[LLM API<br/>AI Arbitration]
+        ALCHEMY[Alchemy/Infura<br/>RPC Provider]
+        ETHERSCAN[Etherscan API<br/>Verification]
+    end
+
+    UI --> WC
+    UI --> API
+    SDK --> API
+    WC --> ALCHEMY
+    
+    API --> PG
+    API --> REDIS
+    API --> IPFS
+    API --> ALCHEMY
+    ARB --> LLM
+    API --> ARB
+    API --> NOTIF
+    API --> ANALYTICS
+    
+    ALCHEMY --> REG
+    ALCHEMY --> BOND
+    ALCHEMY --> ESC
+    ALCHEMY --> DISP
+    ALCHEMY --> POOL
+    ALCHEMY --> GOV
+    
+    REG -.references.-> MNEE
+    BOND -.stakes.-> MNEE
+    ESC -.locks.-> MNEE
+    POOL -.manages.-> MNEE
+    
+    REG --> BOND
+    BOND --> ESC
+    ESC --> DISP
+    DISP --> POOL
+    DISP --> GOV
+    POOL --> BOND
+    
+    PG -.logs.-> IPFS
+    DISP -.evidence.-> IPFS
+```
+
 ## 2. Core Concepts & Architecture
 
 ### Agent Identity (The Wallet Address)
@@ -46,7 +170,28 @@ The insurance mechanism works because the agent's bond is locked in a smart cont
 
 ---
 
-## 4. Setup Instructions
+## 4. Transaction Lifecycle
+
+After an agent initiates a transaction, the protocol enters the **Escrow & Verification** phase:
+
+### Phase 1: The Escrow Window
+- **Funds Locked**: MNEE tokens are moved from the User's wallet into the `EscrowPayment` contract.
+- **Verification Window**: A 24-hour countdown (configurable) begins. During this time, the status is marked as **"Escrowed"**.
+
+### Phase 2: Settlement or Dispute
+There are two possible outcomes once the window closes:
+
+#### Path A: Settlement (The "Happy Path")
+- **Manual/Auto Release**: Once the 24h window passes, anyone can call `settleTransaction`.
+- **Merchant Payment**: Funds are released to the merchant.
+- **Rewards**: The Agent earns **+2 Reputation points**, and a small protocol fee (0.5%) is collected.
+
+#### Path B: Dispute (The "Correction Path")
+- **User Intervention**: If a violation is noticed, the User can file a dispute within the 24h window.
+- **Arbitration**: The backend service analyzes the **Agent Charter** vs. **Transaction Evidence**.
+- **Resolution**: Funds are either refunded to the User (slashing the agent's bond) or released to the merchant if the dispute is invalid.
+
+---
 
 ### Smart Contract Setup
 1. Navigate to `contract/`.
