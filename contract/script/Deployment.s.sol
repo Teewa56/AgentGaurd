@@ -10,7 +10,9 @@ import {InsurancePool} from "../src/InsurancePool.sol";
 
 contract DeploymentScript is Script {
     // MNEE address from README
-    address constant MNEE = 0x8ccedbAe4916b79da7F3F612EfB2EB93A2bFD6cF;
+    // This has to change to the address of the deployed mock token and the token 
+    // should be availabe for testing cus this is not available on sepolia testnet
+    address constant MNEE = 0x8ccedbAe4916b79da7F3F612EfB2EB93A2bFD6cF; //change this
 
     function run() public {
         vm.startBroadcast();
