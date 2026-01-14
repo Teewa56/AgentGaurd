@@ -49,14 +49,14 @@ export class BlockchainService {
         this.registryContract.on("AgentRegistered", async (agentAddress: string, userAddress: string) => {
             console.log(`[Event] Agent Registered: ${agentAddress} (Owner: ${userAddress})`);
             try {
-                // Find or create user in DB based on wallet address if possible
+                // Find or create user in DB based on wallet address
                 let dbUser = await User.findOne({ walletAddress: userAddress });
 
                 // Fetch charter from contract to sync initial limits
                 const charter = await this.registryContract.agentCharters(agentAddress);
 
                 await AgentRepo.create({
-                    user: dbUser?._id, // Might be null if user hasn't signed up via Web2 flow yet
+                    user: dbUser?._id, // Linked if user has linked their wallet
                     address: agentAddress,
                     charter: "On-chain Registered Agent",
                     dailySpendingLimit: Number(charter.dailySpendingLimit),
@@ -64,6 +64,7 @@ export class BlockchainService {
                     transactionLimit: Number(charter.spendingLimitPerTx),
                     isActive: true
                 });
+                console.log(`[Sync] Agent ${agentAddress} synced to DB.`);
             } catch (err) {
                 console.error("Failed to sync AgentRegistered event:", err);
             }
@@ -95,9 +96,14 @@ export class BlockchainService {
         // 3. Transaction Lifecycle Listeners
         this.escrowContract.on("TransactionCreated", async (id: bigint, agent: string, merchant: string, amount: bigint) => {
             console.log(`[Event] Transaction Created: ID ${id.toString()}, Agent ${agent}, Amount ${ethers.formatEther(amount)} MNEE`);
+
+            // Add delay to mitigate race conditions with chain state
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
             try {
                 // Fetch full txn details from contract
                 const txData = await this.escrowContract.transactions(id);
+                console.log(`[Sync] Syncing Tx ${id.toString()} for Agent ${agent}...`);
 
                 await TxRepo.create({
                     txId: Number(id),
@@ -108,6 +114,7 @@ export class BlockchainService {
                     metadataURI: txData.metadataURI,
                     status: 'Initiated'
                 });
+                console.log(`[Sync] Transaction ${id.toString()} created in DB.`);
             } catch (err) {
                 console.error("Failed to sync TransactionCreated event:", err);
             }
