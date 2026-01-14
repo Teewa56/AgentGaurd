@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { TxRepo } from '../repositories/TxRepo';
 import { UnauthorizedError } from '../utils/errors';
 import { formatEther } from 'ethers';
+import User from '../models/User';
 
 export class TransactionController {
     static async getAll(req: Request, res: Response, next: NextFunction) {
@@ -18,9 +19,13 @@ export class TransactionController {
             if (statusFilter === 'Settled') statusFilter = 'Completed';
             if (statusFilter === 'Escrowed') statusFilter = 'Initiated';
 
+            const user = await User.findById(userId);
+            const userAddress = user?.walletAddress;
+
             const transactions = await TxRepo.findAll({
                 agentAddress: agent as string,
-                status: statusFilter
+                status: statusFilter,
+                userAddress: userAddress
             });
 
             // Map to frontend interface

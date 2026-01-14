@@ -4,6 +4,7 @@ import { useState } from 'react';
 import api from '@/lib/api';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
 
 export default function Register() {
     const [email, setEmail] = useState('');
@@ -12,13 +13,15 @@ export default function Register() {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
 
+    const { address, isConnected } = useAccount();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         try {
-            await api.post('/auth/register', { email, password });
+            await api.post('/auth/register', { email, password, walletAddress: address });
             router.push('/auth/login?registered=true');
         } catch (err: any) {
             setError(err.response?.data?.message || 'Registration failed');
@@ -35,6 +38,9 @@ export default function Register() {
                     <p className="mt-2 text-sm text-gray-600">
                         Join the AgentGuard Protocol
                     </p>
+                </div>
+                <div>
+                    {isConnected ? (<p>You are signing up with {address}</p>) : (<p>Connect a wallet before you login</p>)}
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-4">

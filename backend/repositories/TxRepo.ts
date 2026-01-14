@@ -22,10 +22,11 @@ export class TxRepo {
         return Transaction.countDocuments({ status });
     }
 
-    static async findAll(filters: { agentAddress?: string; status?: string } = {}): Promise<ITransaction[]> {
+    static async findAll(filters: { agentAddress?: string; status?: string; userAddress?: string } = {}): Promise<ITransaction[]> {
         const query: any = {};
         if (filters.agentAddress) query.agentAddress = filters.agentAddress;
         if (filters.status) query.status = filters.status;
+        if (filters.userAddress) query.userAddress = filters.userAddress;
         return await Transaction.find(query).sort({ createdAt: -1 });
     }
 }

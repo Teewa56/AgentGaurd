@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import Link from 'next/link';
+import { useAccount } from 'wagmi';
 
 export default function Login() {
     const [email, setEmail] = useState('');
@@ -12,13 +13,15 @@ export default function Login() {
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
 
+    const { address, isConnected } = useAccount();
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
         setLoading(true);
 
         try {
-            const { data } = await api.post('/auth/login', { email, password });
+            const { data } = await api.post('/auth/login', { email, password, walletAddress: address });
             login(data.accessToken, data.user);
         } catch (err: any) {
             setError(err.response?.data?.message || 'Login failed');
@@ -35,6 +38,9 @@ export default function Login() {
                     <p className="mt-2 text-sm text-gray-600">
                         Access your AgentGuard dashboard
                     </p>
+                </div>
+                <div>
+                    {isConnected ? (<p>You are signing in with {address}, ensure this is the wallet you registered with</p>) : (<p>Connect a wallet before you login</p>)}
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-4">
@@ -74,7 +80,7 @@ export default function Login() {
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || !isConnected}
                         className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-bold rounded-xl text-white bg-black hover:bg-gray-800 transition-colors disabled:opacity-50"
                     >
                         {loading ? 'Signing in...' : 'Sign in'}

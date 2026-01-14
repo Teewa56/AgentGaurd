@@ -35,7 +35,30 @@ export default function Transactions() {
                         <button className="flex items-center gap-2 px-4 py-2 border rounded-xl text-sm font-bold hover:bg-secondary transition-all">
                             <Filter className="w-4 h-4" /> Filter
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all">
+                        <button
+                            onClick={() => {
+                                if (!transactions || transactions.length === 0) return;
+                                const headers = ["Tx Hash", "Agent", "Merchant", "Amount (MNEE)", "Timestamp", "Status"];
+                                const rows = transactions.map(tx => [
+                                    tx.hash,
+                                    tx.agent,
+                                    tx.to,
+                                    tx.value.replace(/,/g, ''),
+                                    new Date(tx.timestamp).toISOString(),
+                                    tx.status
+                                ]);
+                                const csvContent = [headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+                                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement("a");
+                                link.href = url;
+                                link.setAttribute("download", `audit-logs-${new Date().getTime()}.csv`);
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-bold shadow-lg shadow-primary/20 hover:scale-[1.02] transition-all"
+                        >
                             Export CSV
                         </button>
                     </div>

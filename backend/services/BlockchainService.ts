@@ -98,14 +98,14 @@ export class BlockchainService {
             console.log(`[Event] Transaction Created: ID ${id.toString()}, Agent ${agent}, Amount ${ethers.formatEther(amount)} MNEE`);
 
             // Add delay to mitigate race conditions with chain state
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             try {
                 // Fetch full txn details from contract
                 const txData = await this.escrowContract.transactions(id);
                 console.log(`[Sync] Syncing Tx ${id.toString()} for Agent ${agent}...`);
 
-                await TxRepo.create({
+                const savedTx = await TxRepo.create({
                     txId: Number(id),
                     agentAddress: agent,
                     userAddress: txData.user,
@@ -114,9 +114,9 @@ export class BlockchainService {
                     metadataURI: txData.metadataURI,
                     status: 'Initiated'
                 });
-                console.log(`[Sync] Transaction ${id.toString()} created in DB.`);
+                console.log(`[Sync] Success: Transaction ${id.toString()} created in DB with ID: ${savedTx._id}`);
             } catch (err) {
-                console.error("Failed to sync TransactionCreated event:", err);
+                console.error(`[Sync] Error: Failed to sync TransactionCreated event for ID ${id.toString()}:`, err);
             }
         });
 

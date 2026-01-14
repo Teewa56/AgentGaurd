@@ -8,7 +8,7 @@ import { UnauthorizedError } from '../utils/errors';
 export class AuthController {
     static async register(req: Request, res: Response, next: NextFunction) {
         try {
-            const { email, password, role } = req.body;
+            const { email, password, role, walletAddress } = req.body;
 
             // Validation handled by middleware
 
@@ -16,14 +16,17 @@ export class AuthController {
             if (existingUser) {
                 return res.status(400).json({ message: "User already exists" });
             }
-
+            if (!walletAddress) {
+                return res.status(400).json({ message: "Wallet address is required" });
+            }
             const salt = await bcrypt.genSalt(parseInt(SECURITY_CONFIG.BCRYPT_SALT_ROUNDS));
             const passwordHash = await bcrypt.hash(password, salt);
 
             const newUser = new User({
                 email,
                 passwordHash,
-                role: role || 'user'
+                role: role || 'user',
+                walletAddress
             });
 
             await newUser.save();
@@ -36,7 +39,7 @@ export class AuthController {
 
     static async login(req: Request, res: Response, next: NextFunction) {
         try {
-            const { email, password } = req.body;
+            const { email, password, walletAddress } = req.body;
 
             const user = await User.findOne({ email });
             if (!user) {
@@ -46,6 +49,10 @@ export class AuthController {
             const isMatch = await bcrypt.compare(password, user.passwordHash);
             if (!isMatch) {
                 return res.status(401).json({ message: "Invalid credentials" });
+            }
+
+            if (walletAddress != user.walletAddress) {
+                return res.status(401).json({ message: "Connect to the wallet you registered with and try again" });
             }
 
             // Generate Access Token (Short Lived)
