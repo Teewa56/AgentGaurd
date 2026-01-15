@@ -3,12 +3,18 @@ import Joi from 'joi';
 export const registerUserSchema = Joi.object({
     email: Joi.string().email().required(),
     password: Joi.string().min(8).required(),
-    role: Joi.string().valid('user', 'agent', 'admin').default('user')
+    role: Joi.string().valid('user', 'agent', 'admin').default('user'),
+    walletAddress: Joi.string().regex(/^0x[a-fA-F0-9]{40}$/).required().messages({
+        'string.pattern.base': 'Address must be a valid Ethereum address'
+    })
 });
 
 export const loginUserSchema = Joi.object({
     email: Joi.string().email().required(),
-    password: Joi.string().required()
+    password: Joi.string().required(),
+    walletAddress: Joi.string().regex(/^0x[a-fA-F0-9]{40}$/).required().messages({
+        'string.pattern.base': 'Address must be a valid Ethereum address'
+    })
 });
 
 export const registerAgentSchema = Joi.object({

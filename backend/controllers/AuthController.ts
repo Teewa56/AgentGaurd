@@ -41,7 +41,7 @@ export class AuthController {
         try {
             const { email, password, walletAddress } = req.body;
 
-            const user = await User.findOne({ email });
+            const user = await User.findOne({ email, walletAddress });
             if (!user) {
                 return res.status(401).json({ message: "Invalid credentials" });
             }

@@ -39,7 +39,7 @@ export default function Register() {
                         Join the AgentGuard Protocol
                     </p>
                 </div>
-                <div className='p-2 bg-blue-500 text-xs font-bold rounded-lg'>
+                <div className='p-2 text-white bg-blue-500 text-xs font-bold rounded-lg'>
                     {isConnected ? (<p>You are signing up with {address}</p>) : (<p>Connect a wallet before you login</p>)}
                 </div>
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
