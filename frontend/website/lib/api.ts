@@ -33,16 +33,17 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        const originalRequest = error.config;
+        const originalRequest = error.config as any;
 
         // Handle 402 Payment Required
         if (error.response?.status === 402) {
             const paymentDetails = (error.response.data as any)?.payment;
 
             if (paymentDetails && paymentModalCallback) {
+                const callback = paymentModalCallback;
                 // Show payment modal
                 return new Promise((resolve, reject) => {
-                    paymentModalCallback({
+                    callback({
                         ...paymentDetails,
                         onComplete: async () => {
                             // Retry the original request after payment
