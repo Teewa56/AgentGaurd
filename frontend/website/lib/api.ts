@@ -3,6 +3,13 @@ import Cookies from 'js-cookie';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
+// Payment modal state management
+let paymentModalCallback: ((details: any) => void) | null = null;
+
+export function setPaymentModalHandler(callback: (details: any) => void) {
+    paymentModalCallback = callback;
+}
+
 const api = axios.create({
     baseURL: `${API_URL}/api`,
     withCredentials: true,
@@ -28,6 +35,38 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
+        // Handle 402 Payment Required
+        if (error.response?.status === 402) {
+            const paymentDetails = (error.response.data as any)?.payment;
+
+            if (paymentDetails && paymentModalCallback) {
+                // Show payment modal
+                return new Promise((resolve, reject) => {
+                    paymentModalCallback({
+                        ...paymentDetails,
+                        onComplete: async () => {
+                            // Retry the original request after payment
+                            if (originalRequest && !originalRequest._retry) {
+                                originalRequest._retry = true;
+                                try {
+                                    const response = await api(originalRequest);
+                                    resolve(response);
+                                } catch (retryError) {
+                                    reject(retryError);
+                                }
+                            } else {
+                                reject(error);
+                            }
+                        },
+                        onCancel: () => {
+                            reject(error);
+                        }
+                    });
+                });
+            }
+        }
+
+        // Handle 401 Unauthorized
         if (error.response?.status === 401 && !originalRequest._retry && !originalRequest.url?.includes('/auth/refresh')) {
             originalRequest._retry = true;
 

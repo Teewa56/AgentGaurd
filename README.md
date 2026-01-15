@@ -12,6 +12,9 @@ The trust and insurance layer for AI agent commerce—making agent transactions 
 5. [Technology Stack](#technology-stack)
 6. [Ecosystem Importance](#ecosystem-importance)
 7. [Real-World Usage Scenarios](#real-world-usage-scenarios)
+8. [HTTP 402 Payment Required Protocol](#http-402-payment-required-protocol)
+9. [Enhanced Non-Technical CLI](#enhanced-non-technical-cli)
+10. [Upgradeable Smart Contracts](#upgradeable-smart-contracts)
 
 ## The Problem
 
@@ -579,4 +582,74 @@ Merchant makes $3.30 MORE per transaction (3.4% improvement)
 - Market forces determine agent viability
 - Smart contracts enforce rules automatically
 - DAO governs edge cases and parameter adjustments
-- Decentralized credit bureau emerges organically
+---
+
+## HTTP 402 Payment Required Protocol
+
+AgentGuard is a pioneer in implementing the HTTP 402 status code for autonomous agent commerce. We provide a standardized framework for pay-per-use API access and agent-to-service payments.
+
+### Three Core Use Cases
+
+**1. AgentGuard Premium Analytics**
+- Access advanced agent performance trends, risk scores, and AI-powered architectural optimizations.
+- Payments are handled via a pre-paid credit system (1 MNEE = 10 credits).
+- Endpoints like `/api/agents/premium-analytics` require payment.
+
+**2. Third-Party API Payments**
+- Your agents can pay for external services (weather data, stock APIs, GPU compute) directly through AgentGuard.
+- Supports instant settlement and automated dispute windows.
+
+**3. Merchant API Protection**
+- Merchants can "gate" their APIs behind AgentGuard payments.
+- Only authorized agents with valid payment proofs can access protected resources.
+
+### How It Works
+1. **Request**: An agent calls a premium endpoint.
+2. **402 Response**: The server returns `402 Payment Required` with payment instructions.
+3. **Payment**: The agent uses its wallet to purchase credits or provides a transaction hash.
+4. **Resubmit**: The request is automatically retried with the `X-Payment-Proof` header.
+5. **Access**: Upon verification, the request succeeds.
+
+---
+
+## Enhanced Non-Technical CLI
+
+We've completely redesigned our CLI to empower non-technical users to join the agent economy safely and easily.
+
+### Features
+- **Interactive Wizards**: No complex flags or JSON configs. Just follow the prompts.
+- **Wallet Auto-Generation**: Securely generate or import wallets with one command.
+- **Smart Defaults**: We provide sensible spending limits and task configurations.
+- **Premium Runtime**: Run your agent locally with a single command (requires premium access).
+- **Gemini AI Integration**: Full support for Gemini processing and decision making.
+
+### Essential Commands
+- `agentguard setup`: One-time configuration of your network and wallet.
+- `agentguard create`: Create and register a new agent in minutes.
+- `agentguard deploy`: Push your agent configuration to the blockchain.
+- `agentguard status`: Check balances, agents, and transaction history.
+- `agentguard run <agent-id>`: Start the autonomous agent runtime.
+- `agentguard test`: Verify your agent's connectivity and settings.
+
+---
+
+## Upgradeable Smart Contracts
+
+To ensure long-term stability and feature expansion, all core AgentGuard contracts utilize the **UUPS (Universal Upgradeable Proxy Standard)** pattern.
+
+### Benefits
+- **Future-Proof**: We can add support for new tokens or resolution logic without requiring users to migrate.
+- **Transparent**: Upgrade history is visible on-chain.
+- **Secure**: All upgrades are governed by the protocol owner and eventually the DAO.
+
+### Key Upgradeable Components
+- **EscrowPayment**: Now supports batch payments and 1-hour escrow for API calls.
+- **APIPaymentRegistry**: Manages credentials and pre-paid credits for the HTTP 402 system.
+- **InsurancePool & ReputationBond**: Enhanced logic for dynamic risk assessment.
+
+---
+
+## Maintenance & Deployment
+- Deployment: Backend (Render), Frontend (Vercel).
+- Support: [support@agentguard.io](mailto:ogunodemarvellous@gmail.com).
+- License: MIT.

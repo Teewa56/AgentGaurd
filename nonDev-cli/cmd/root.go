@@ -18,8 +18,8 @@ func Execute() error {
 }
 
 func init() {
-	rootCmd.AddCommand(initCmd)
-	rootCmd.AddCommand(createAgentCmd)
-	rootCmd.AddCommand(payCmd)
-	rootCmd.AddCommand(statusCmd)
+	// The commands are registered in their respective files via their init() functions.
+	// We don't need to manually add them here if they are in the same package.
+	// But we should ensure we remove the old placeholders.
 }
+

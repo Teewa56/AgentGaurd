@@ -10,6 +10,7 @@ import disputeRoutes from './routes/disputeRoutes';
 import authRoutes from './routes/authRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import transactionRoutes from './routes/transactionRoutes';
+import paymentRoutes from './routes/paymentRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { SECURITY_CONFIG } from './config/security';
 
@@ -23,7 +24,7 @@ app.use(cors({
     credentials: true,
     origin: SECURITY_CONFIG.CORS_ORIGIN,
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Payment-Proof', 'X-Agent-Address', 'X-CLI-API-Key', 'X-CLI-Version']
 }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10kb' })); // Body limit
@@ -43,6 +44,7 @@ app.use('/api/agents', agentRoutes);
 app.use('/api/disputes', disputeRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Error Handler
 app.use(errorHandler);

@@ -318,56 +318,39 @@ await client.bonds.stake({
 
 ---
 
-## 7. Go CLI Tool
+### CLI Setup (Enhanced Non-Technical CLI)
 
-Created a user-friendly CLI at [`nonDev-cli/`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/) for non-technical users.
+The new AgentGuard CLI is built for ease of use and security.
 
-### Files Created:
-- [`go.mod`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/go.mod) - Go module definition
-- [`main.go`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/main.go) - Entry point
-- [`cmd/root.go`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/cmd/root.go) - Root command
-- [`cmd/init.go`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/cmd/init.go) - Initialization command
-- [`cmd/create_agent.go`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/cmd/create_agent.go) - Agent creation wizard
-- [`cmd/pay.go`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/cmd/pay.go) - Payment and status commands
-- [`README.md`](file:///c:/Users/oguno/Desktop/codes/AgentGaurd/nonDev-cli/README.md) - User documentation
-
-### CLI Commands:
-
-**Initialize:**
-```bash
-agentguard init
-```
-- Creates config at `~/.agentguard/config.yaml`
-- Generates a new wallet
-- Displays wallet address for funding
-
-**Create Agent:**
-```bash
-agentguard create-agent
-```
-- Interactive wizard for agent registration
-- Sets spending limits (per-tx, daily, monthly)
-- Registers agent on-chain
-
-**Make Payment:**
-```bash
-agentguard pay 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb 50 USDC
-```
-- Supports USDC, USDT, and MNEE
-- Confirms before executing
-- Shows transaction ID and status
-
-**Check Status:**
-```bash
-agentguard status
-```
-- Displays wallet balances
-- Shows registered agents
-- Lists recent transactions
+1. **Navigate**: `cd nonDev-cli/`
+2. **Build**: `go build -o agentguard`
+3. **Setup**: `./agentguard setup` (Interactive wizard for network, wallet, and backend)
+4. **Create Agent**: `./agentguard create` (Wizard for agent identity and spending limits)
+5. **Start Runtime**: `./agentguard run <agent-id>` (Launches the autonomous Gemini-powered agent)
 
 ---
 
-## 8. Token Support Summary
+## 8. HTTP 402 Payment Required Implementation
+
+We utilize HTTP 402 for monetizing premium features and enabling agent-to-service payments.
+
+### Backend Middleware
+Located in `backend/middleware/PaymentRequiredMiddleware.ts`. It intercepts requests to premium routes and:
+1. Verifies existing credits in MongoDB.
+2. Checks for valid `X-Payment-Proof` (transaction hash).
+3. Consumes credits or validates the payment proof.
+
+### Smart Contract Integration
+- `APIPaymentRegistry.sol`: Tracks pre-paid credits and authorizes API access.
+- `EscrowPaymentUpgradeable.sol`: Handles high-frequency API payments with 1-hour escrow windows.
+
+### Frontend Integration
+- Axios interceptor in `frontend/website/lib/api.ts` automatically detects 402 responses and triggers the `PaymentModal`.
+- User can buy credits or pay for a specific request using MNEE, USDC, or USDT.
+
+---
+
+## 9. Token Support Summary
 
 ### Supported Tokens
 
