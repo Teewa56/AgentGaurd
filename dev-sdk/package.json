@@ -1,16 +1,35 @@
 {
-  "name": "dev-sdk",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "test": "test"
-  },
+  "name": "@agentguard/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for AgentGuard - Stripe for AI Agent Payments",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs"
+  "keywords": [
+    "agentguard",
+    "ai-agents",
+    "payments",
+    "blockchain",
+    "ethereum",
+    "web3"
+  ],
+  "author": "AgentGuard Team",
+  "license": "MIT",
+  "dependencies": {
+    "viem": "^2.21.54",
+    "abitype": "^1.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "peerDependencies": {
+    "viem": "^2.0.0"
+  }
 }
