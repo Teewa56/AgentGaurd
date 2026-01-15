@@ -8,8 +8,8 @@ export interface AuthRequest extends Request {
 }
 
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
-    const authHeader = req.headers['Authorization'];
-    const token = typeof authHeader === 'string' && authHeader.split(' ')[1];
+    const authHeader: any = req.headers['Authorization'];
+    const token = authHeader?.split(' ')[1];
 
     if (!token) {
         console.error(`[Auth] No token provided. Headers: ${JSON.stringify(req.headers)}`);
