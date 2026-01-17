@@ -17,6 +17,8 @@
    
    # Token Addresses
    MNEE_TOKEN_ADDRESS=0x...  # MNEE stablecoin address
+   USDT_TOKEN_ADDRESS=0x...  # USDT stablecoin address
+   USDC_TOKEN_ADDRESS=0x...  # USDC stablecoin address
    
    # Deployed Contract Addresses (filled after deployment)
    AGENT_REGISTRY_ADDRESS=
