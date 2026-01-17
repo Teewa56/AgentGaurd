@@ -103,6 +103,8 @@ export default function LandingPage() {
             <div className="font-black text-2xl tracking-tighter">OPENZEPPELIN</div>
             <div className="font-black text-2xl tracking-tighter">GEMINI</div>
             <div className="font-black text-2xl tracking-tighter">MNEE</div>
+            <div className="font-black text-2xl tracking-tighter">USDT</div>
+            <div className="font-black text-2xl tracking-tighter">USDC</div>
           </div>
         </div>
       </section>
