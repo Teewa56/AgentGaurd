@@ -86,8 +86,8 @@ abstract contract ReentrancyGuardUpgradeable is Initializable {
 
     function _nonReentrantAfter() private {
         ReentrancyGuardStorage storage $ = _getReentrancyGuardStorage();
-        // By storing the original value once again, a refund is triggered (see
-        // https://eips.ethereum.org/EIPS/eip-2200)
+        // By storing the original value once again, a refund is triggered, which
+        // makes it possible to extract the gas that was paid for the call.
         $._status = NOT_ENTERED;
     }
 

@@ -9,6 +9,7 @@ import "../src/AgentRegistry.sol";
 import "../src/ReputationBond.sol";
 import "../src/InsurancePool.sol";
 import "../src/DisputeResolution.sol";
+import {MockERC20} from "../src/MockERC20.sol";
 
 /**
  * @title DeployProxies
@@ -18,6 +19,8 @@ import "../src/DisputeResolution.sol";
 contract DeployProxies is Script {
     // Deployment addresses will be stored here
     address public mneeToken;
+    address public usdtToken;
+    address public usdcToken;
     address public agentRegistryProxy;
     address public reputationBondProxy;
     address public escrowPaymentProxy;
@@ -26,18 +29,39 @@ contract DeployProxies is Script {
     address public apiPaymentRegistryProxy;
 
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-        address deployer = vm.addr(deployerPrivateKey);
+        vm.startBroadcast();
 
-        // Get MNEE token address (should be deployed separately or use existing)
+        // Check for existing tokens or deploy mocks
         mneeToken = vm.envOr("MNEE_TOKEN_ADDRESS", address(0));
-        require(mneeToken != address(0), "MNEE token address not set");
+        usdtToken = vm.envOr("USDT_TOKEN_ADDRESS", address(0));
+        usdcToken = vm.envOr("USDC_TOKEN_ADDRESS", address(0));
 
-        vm.startBroadcast(deployerPrivateKey);
+        if (mneeToken == address(0)) {
+            console.log("Deploying Mock MNEE...");
+            MockERC20 mnee = new MockERC20("Mock MNEE", "MNEE", 18);
+            mnee.mint(msg.sender, 1000000 * 1e18);
+            mneeToken = address(mnee);
+        }
+
+        if (usdtToken == address(0)) {
+            console.log("Deploying Mock USDT...");
+            MockERC20 usdt = new MockERC20("Mock USDT", "USDT", 6);
+            usdt.mint(msg.sender, 1000000 * 1e6);
+            usdtToken = address(usdt);
+        }
+
+        if (usdcToken == address(0)) {
+            console.log("Deploying Mock USDC...");
+            MockERC20 usdc = new MockERC20("Mock USDC", "USDC", 6);
+            usdc.mint(msg.sender, 1000000 * 1e6);
+            usdcToken = address(usdc);
+        }
 
         console.log("Deploying AgentGuard contracts with UUPS proxies...");
-        console.log("Deployer:", deployer);
+        console.log("Deployer:", msg.sender);
         console.log("MNEE Token:", mneeToken);
+        console.log("USDT Token:", usdtToken);
+        console.log("USDC Token:", usdcToken);
         console.log("");
 
         // 1. Deploy AgentRegistry (non-upgradeable for now, can be made upgradeable later)
@@ -115,6 +139,21 @@ contract DeployProxies is Script {
             disputeResolutionProxy
         );
         console.log("   EscrowPayment authorized contracts set");
+
+        // Whitelist Tokens
+        console.log("   Whitelisting tokens...");
+        EscrowPaymentUpgradeable(escrowPaymentProxy).setTokenSupport(
+            mneeToken,
+            true
+        );
+        EscrowPaymentUpgradeable(escrowPaymentProxy).setTokenSupport(
+            usdtToken,
+            true
+        );
+        EscrowPaymentUpgradeable(escrowPaymentProxy).setTokenSupport(
+            usdcToken,
+            true
+        );
 
         vm.stopBroadcast();
 

@@ -13,15 +13,13 @@ import "../src/APIPaymentRegistry.sol";
  */
 contract UpgradeContracts is Script {
     function run() external {
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
-
         // Get proxy addresses from environment
         address escrowPaymentProxy = vm.envAddress("ESCROW_PAYMENT_ADDRESS");
         address apiPaymentRegistryProxy = vm.envAddress(
             "API_PAYMENT_REGISTRY_ADDRESS"
         );
 
-        vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         console.log("Upgrading AgentGuard contracts...");
         console.log("");
