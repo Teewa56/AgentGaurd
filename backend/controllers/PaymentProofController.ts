@@ -2,7 +2,10 @@ import { Response, NextFunction } from 'express';
 import { ethers } from 'ethers';
 import { PaymentProof } from '../models/PaymentProof';
 import { AuthRequest } from '../middleware/authMiddleware';
-import { BadRequestError, NotFoundError } from '../utils/errors';
+import { BadRequestError, NotFoundError, UnauthorizedError } from '../utils/errors';
+import { BlockchainService } from '../services/BlockchainService';
+
+const blockchainService = new BlockchainService();
 
 export class PaymentProofController {
     /**
@@ -35,9 +38,11 @@ export class PaymentProofController {
                 });
             }
 
-            // TODO: Verify transaction on-chain
-            // For now, we'll trust the transaction hash
-            // In production, verify with blockchain RPC
+            // Verify transaction on-chain
+            const isValid = await blockchainService.verifyTransaction(transactionHash, amount, token);
+            if (!isValid) {
+                throw new BadRequestError('Invalid or unconfirmed transaction');
+            }
 
             // Calculate credits based on amount (1 MNEE = 10 credits)
             const creditsIssued = amount * 10;

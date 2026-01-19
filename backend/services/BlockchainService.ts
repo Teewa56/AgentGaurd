@@ -203,9 +203,69 @@ export class BlockchainService {
             console.log(`Dispute ${txId} resolved on-chain. TX: ${txResponse.hash}`);
 
             await DisputeRepo.updateStatus(txId, 'Resolved', result);
-
         } catch (error) {
             console.error(`Failed to handle dispute ${txId}:`, error);
+        }
+    }
+
+    /**
+     * Verify an ERC20 transaction on-chain
+     * @param txHash Transaction hash
+     * @param expectedAmount Amount expected (in human-readable units)
+     * @param tokenSymbol Token symbol (MNEE, USDC, USDT)
+     * @returns boolean indicating if transaction is valid
+     */
+    async verifyTransaction(txHash: string, expectedAmount: number, tokenSymbol: string): Promise<boolean> {
+        try {
+            const receipt = await this.provider.getTransactionReceipt(txHash);
+            if (!receipt || receipt.status === 0) return false;
+
+            const tx = await this.provider.getTransaction(txHash);
+            if (!tx) return false;
+
+            const receiver = (process.env.PAYMENT_RECEIVER_ADDRESS || '0x0000000000000000000000000000000000000000').toLowerCase();
+
+            // Map symbol to address and decimals
+            let tokenAddress = '';
+            let decimals = 18;
+            if (tokenSymbol === 'MNEE') {
+                tokenAddress = process.env.MNEE_TOKEN_ADDRESS || '';
+                decimals = 18;
+            } else if (tokenSymbol === 'USDC') {
+                tokenAddress = process.env.USDC_TOKEN_ADDRESS || '';
+                decimals = 6;
+            } else if (tokenSymbol === 'USDT') {
+                tokenAddress = process.env.USDT_TOKEN_ADDRESS || '';
+                decimals = 6;
+            }
+
+            // Basic check: Is it interacting with the correct token?
+            if (tx.to?.toLowerCase() !== tokenAddress.toLowerCase()) {
+                // If it's a direct eth/mnee transfer (for mock tokens that might be native)
+                if (tokenSymbol === 'MNEE' && tx.to?.toLowerCase() === receiver) {
+                    const value = parseFloat(ethers.formatEther(tx.value));
+                    return value >= expectedAmount;
+                }
+                return false;
+            }
+
+            // Parse ERC20 Transfer(address,address,uint256)
+            // Function selector for transfer: 0xa9059cbb
+            if (tx.data.startsWith('0xa9059cbb')) {
+                const iface = new ethers.Interface(['function transfer(address to, uint256 amount)']);
+                const decoded = iface.decodeFunctionData('transfer', tx.data);
+
+                const to = decoded[0].toLowerCase();
+                const amount = decoded[1];
+                const actualAmount = parseFloat(ethers.formatUnits(amount, decimals));
+
+                return to === receiver && actualAmount >= expectedAmount;
+            }
+
+            return false;
+        } catch (error) {
+            console.error("Transaction verification failed:", error);
+            return false;
         }
     }
 }
