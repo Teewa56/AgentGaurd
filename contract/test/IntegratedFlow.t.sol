@@ -25,7 +25,7 @@ contract IntegratedFlowTest is Test {
     function setUp() public {
         mnee = new MockERC20("MNEE", "MNEE");
 
-        pool = new InsurancePool(address(mnee));
+        pool = new InsurancePool();
         registry = new AgentRegistry();
         bond = new ReputationBond(address(mnee), address(registry));
         escrow = new EscrowPayment(
@@ -65,12 +65,14 @@ contract IntegratedFlowTest is Test {
         vm.prank(agent);
         uint256 txId = escrow.initiateTransaction(
             merchant,
+            address(mnee),
             50e18,
             "ipfs://evidence"
         );
 
         // 4. Verify Escrow
-        (, , , , uint256 lockEnd, , , ) = escrow.transactions(txId);
+        // Transaction struct has 9 fields in EscrowPayment.sol.
+        (, , , , , uint256 lockEnd, , , ) = escrow.transactions(txId);
         assertEq(mnee.balanceOf(address(escrow)), 50e18);
         assertEq(lockEnd, block.timestamp + 24 hours);
 
@@ -95,6 +97,7 @@ contract IntegratedFlowTest is Test {
         vm.prank(agent);
         uint256 txId = escrow.initiateTransaction(
             merchant,
+            address(mnee),
             50e18,
             "ipfs://evidence"
         );

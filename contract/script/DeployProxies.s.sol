@@ -48,7 +48,10 @@ contract DeployProxies is Script {
 
         // 2. Deploy ReputationBond (non-upgradeable for now)
         console.log("2. Deploying ReputationBond...");
-        ReputationBond reputationBond = new ReputationBond(agentRegistryProxy);
+        ReputationBond reputationBond = new ReputationBond(
+            mneeToken,
+            agentRegistryProxy
+        );
         reputationBondProxy = address(reputationBond);
         console.log("   ReputationBond deployed at:", reputationBondProxy);
 
@@ -73,20 +76,14 @@ contract DeployProxies is Script {
 
         // 4. Deploy InsurancePool (non-upgradeable for now)
         console.log("4. Deploying InsurancePool...");
-        InsurancePool insurancePool = new InsurancePool(
-            mneeToken,
-            agentRegistryProxy,
-            reputationBondProxy
-        );
+        InsurancePool insurancePool = new InsurancePool();
         insurancePoolProxy = address(insurancePool);
         console.log("   InsurancePool deployed at:", insurancePoolProxy);
 
         // 5. Deploy DisputeResolution (non-upgradeable for now)
         console.log("5. Deploying DisputeResolution...");
         DisputeResolution disputeResolution = new DisputeResolution(
-            agentRegistryProxy,
             escrowPaymentProxy,
-            insurancePoolProxy,
             reputationBondProxy
         );
         disputeResolutionProxy = address(disputeResolution);

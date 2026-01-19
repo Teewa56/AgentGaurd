@@ -79,20 +79,30 @@ contract DisputeResolution is Ownable {
 
         (
             address agent,
-            , // user address extracted but unused in this local scope
+            , // user
+            address merchant,
+            , // token (index 3, 0-indexed? No, 1-indexed count: 4)
+            uint256 amount, // (index 4)
             ,
-            uint256 amount,
             ,
-            ,
-            bool settled,
+            bool settled, // (index 7)
 
-        ) = ESCROW.transactions(txId);
+        ) = // metadataURI (index 8)
+
+            ESCROW.transactions(txId);
         require(!settled, "Transaction already settled");
 
         uint256 userAmount = (amount * refundPercent) / 100;
-        uint256 merchantAmount = (amount - userAmount) + slashAmount;
 
-        // Handle reputation and bond BEFORE settlement if slashing is involved
+        // Separated logic:
+        // 1. Transaction Token Settlement
+        // The user gets `userAmount` (refund).
+        // The merchant gets the REMAINDER of the transaction (`merchantAmount`).
+        // We do NOT add `slashAmount` here because `slashAmount` is MNEE and `transaction.token` might be USDC.
+
+        uint256 merchantAmount = amount - userAmount; // Remainder of the locked funds
+
+        // 2. Reputation & Bond Slashing (MNEE)
         if (refundPercent > 0) {
             // User got a refund, agent likely at fault
             int256 repPenalty = refundPercent == 100
@@ -101,14 +111,19 @@ contract DisputeResolution is Ownable {
             BOND.updateReputation(agent, repPenalty);
 
             if (slashAmount > 0) {
-                BOND.slashBond(agent, slashAmount, reasoning);
+                // Determine who gets the slashed MNEE.
+                // If it's a compensation for the merchant, send to merchant.
+                // Otherwise could go to InsurancePool.
+                // Based on user request "intention of the bond is to compensate the merchant":
+                address recipient = merchant;
+                BOND.slashBondTo(agent, slashAmount, recipient, reasoning);
             }
         } else {
             // Merchant protected, agent did well (likely false dispute)
             BOND.updateReputation(agent, reputationRewardFalseDispute);
         }
 
-        // Execute settlement in Escrow
+        // Execute settlement in Escrow (Transaction Token only)
         ESCROW.resolveDispute(txId, userAmount, merchantAmount);
 
         emit DisputeResolved(txId, reasoning, userAmount);

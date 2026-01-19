@@ -131,9 +131,10 @@ contract ReputationBond is Ownable {
     /**
      * @dev Slashes bond for dispute payouts.
      */
-    function slashBond(
+    function slashBondTo(
         address agent,
         uint256 amount,
+        address to,
         string calldata reason
     ) external {
         require(
@@ -147,12 +148,8 @@ contract ReputationBond is Ownable {
 
         agentStats[agent].stakedMnee -= amount;
 
-        // Transfer slashed amount to Escrow or InsurancePool
-        // Here we send it to Escrow so it can be part of the dispute settlement
-        require(
-            MNEE_TOKEN.transfer(escrowPayment, amount),
-            "Slash transfer failed"
-        );
+        // Transfer slashed amount to the specified recipient (Merchant or InsurancePool)
+        require(MNEE_TOKEN.transfer(to, amount), "Slash transfer failed");
 
         emit BondSlashed(agent, amount, reason);
     }

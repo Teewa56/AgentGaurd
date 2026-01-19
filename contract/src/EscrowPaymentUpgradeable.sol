@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
+import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import "./AgentRegistry.sol";
 import "./ReputationBond.sol";
 
@@ -107,7 +107,6 @@ contract EscrowPaymentUpgradeable is
         address _bond
     ) public initializer {
         __Ownable_init(msg.sender);
-        __UUPSUpgradeable_init();
 
         supportedTokens[_mneeToken] = true;
         REGISTRY = AgentRegistry(_registry);
@@ -148,7 +147,7 @@ contract EscrowPaymentUpgradeable is
         address _token,
         uint256 _amount
     ) external onlyOwner {
-        IERC20Upgradeable(_token).transfer(msg.sender, _amount);
+        IERC20(_token).transfer(msg.sender, _amount);
         emit FundsRescued(_token, _amount);
     }
 
@@ -229,7 +228,7 @@ contract EscrowPaymentUpgradeable is
         );
 
         address user = REGISTRY.agentToUser(agent);
-        IERC20Upgradeable tokenContract = IERC20Upgradeable(token);
+        IERC20 tokenContract = IERC20(token);
 
         // Fee-on-transfer support: Measure actual received amount
         uint256 balanceBefore = tokenContract.balanceOf(address(this));
@@ -316,7 +315,7 @@ contract EscrowPaymentUpgradeable is
 
         uint256 totalAmount = callCount * pricePerCall;
         address user = REGISTRY.agentToUser(agent);
-        IERC20Upgradeable tokenContract = IERC20Upgradeable(token);
+        IERC20 tokenContract = IERC20(token);
 
         require(
             tokenContract.transferFrom(user, address(this), totalAmount),
@@ -353,7 +352,7 @@ contract EscrowPaymentUpgradeable is
         require(actualCallCount <= batch.callCount, "Exceeds pre-paid calls");
 
         batch.isSettled = true;
-        IERC20Upgradeable tokenContract = IERC20Upgradeable(batch.token);
+        IERC20 tokenContract = IERC20(batch.token);
 
         uint256 pricePerCall = batch.totalAmount / batch.callCount;
         uint256 providerAmount = actualCallCount * pricePerCall;
@@ -400,7 +399,7 @@ contract EscrowPaymentUpgradeable is
     function _settleTransaction(uint256 txId) internal {
         Transaction storage txn = transactions[txId];
         txn.isSettled = true;
-        IERC20Upgradeable tokenContract = IERC20Upgradeable(txn.token);
+        IERC20 tokenContract = IERC20(txn.token);
 
         // Calculate fees
         uint256 fee = (txn.amount * serviceFeeBps) / 10000;
@@ -463,7 +462,7 @@ contract EscrowPaymentUpgradeable is
         require(!txn.isSettled, "Already settled");
 
         txn.isSettled = true;
-        IERC20Upgradeable tokenContract = IERC20Upgradeable(txn.token);
+        IERC20 tokenContract = IERC20(txn.token);
 
         if (userAmount > 0) {
             require(
