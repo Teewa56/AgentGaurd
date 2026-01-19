@@ -14,6 +14,7 @@ import { useStats } from '@/hooks/useStats';
 import { useAgents } from '@/hooks/useAgents';
 import { useTransactions } from '@/hooks/useTransactions';
 import Link from 'next/link';
+import { Skeleton } from '@/components/ui/Skeleton';
 
 export default function Dashboard() {
     const { data: stats, isLoading: statsLoading } = useStats();
@@ -21,13 +22,7 @@ export default function Dashboard() {
     const { data: transactions, isLoading: txLoading } = useTransactions();
 
     if (statsLoading || agentsLoading || txLoading) {
-        return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center h-screen">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-                </div>
-            </DashboardLayout>
-        );
+        return <DashboardSkeleton />;
     }
 
     // Default to 0/empty if data fetch fails or is pending
@@ -153,6 +148,80 @@ export default function Dashboard() {
                             {(!transactions || transactions.length === 0) && (
                                 <p className="text-sm text-center text-muted-foreground">No recent activity.</p>
                             )}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </DashboardLayout>
+    );
+}
+
+function DashboardSkeleton() {
+    return (
+        <DashboardLayout>
+            <div className="space-y-8">
+                <div>
+                    <Skeleton className="h-9 w-64 mb-2" />
+                    <Skeleton className="h-5 w-96" />
+                </div>
+
+                {/* Stats Grid Skeleton */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {[...Array(4)].map((_, i) => (
+                        <div key={i} className="bg-white border rounded-2xl p-6 shadow-sm">
+                            <div className="flex items-center justify-between mb-4">
+                                <Skeleton className="h-9 w-9 rounded-lg" />
+                                <Skeleton className="h-5 w-20 rounded-full" />
+                            </div>
+                            <Skeleton className="h-5 w-32 mb-1" />
+                            <Skeleton className="h-8 w-24 mb-2" />
+                            <Skeleton className="h-4 w-40" />
+                        </div>
+                    ))}
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Active Agents Skeleton */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <div className="flex items-center justify-between">
+                            <Skeleton className="h-7 w-48" />
+                            <Skeleton className="h-5 w-16" />
+                        </div>
+                        <div className="bg-white border rounded-2xl overflow-hidden shadow-sm">
+                            <div className="p-4 border-b bg-secondary/30 flex justify-between gap-4">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-4 w-8" />
+                            </div>
+                            <div className="divide-y">
+                                {[...Array(5)].map((_, i) => (
+                                    <div key={i} className="p-4 flex items-center justify-between gap-4">
+                                        <Skeleton className="h-5 w-24" />
+                                        <Skeleton className="h-5 w-20" />
+                                        <Skeleton className="h-5 w-32" />
+                                        <Skeleton className="h-6 w-20 rounded-full" />
+                                        <Skeleton className="h-8 w-8 rounded-lg" />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Recent Activity Skeleton */}
+                    <div className="space-y-6">
+                        <Skeleton className="h-7 w-40" />
+                        <div className="bg-white border rounded-2xl p-6 shadow-sm space-y-6">
+                            {[...Array(5)].map((_, i) => (
+                                <div key={i} className="flex gap-4">
+                                    <Skeleton className="h-6 w-6 rounded-full flex-shrink-0" />
+                                    <div className="space-y-2 flex-1">
+                                        <Skeleton className="h-4 w-3/4" />
+                                        <Skeleton className="h-3 w-1/2" />
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
