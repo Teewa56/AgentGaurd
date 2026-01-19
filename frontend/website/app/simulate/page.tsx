@@ -14,10 +14,13 @@ import {
     ESCROW_PAYMENT_ADDRESS,
     ESCROW_PAYMENT_ABI,
     MNEE_TOKEN_ADDRESS,
+    USDC_TOKEN_ADDRESS,
+    USDT_TOKEN_ADDRESS,
     ERC20_ABI
 } from '@/lib/contracts';
-import { parseEther } from 'viem';
+import { parseUnits, formatUnits } from 'viem';
 import { useAgents } from '@/hooks/useAgents';
+import { useReadContract } from 'wagmi';
 
 export default function Simulate() {
     const { address: currentWallet } = useAccount();
@@ -25,6 +28,23 @@ export default function Simulate() {
     const [merchant, setMerchant] = useState('0x1..........');
     const [amount, setAmount] = useState('10');
     const [metadata, setMetadata] = useState('{"item": "AI GPU Credits", "service": "HyperCompute"}');
+    const [selectedTokenAddr, setSelectedTokenAddr] = useState(MNEE_TOKEN_ADDRESS);
+
+    const TOKENS = [
+        { name: 'MNEE', address: MNEE_TOKEN_ADDRESS, decimals: 18 },
+        { name: 'USDC', address: USDC_TOKEN_ADDRESS, decimals: 18 },
+        { name: 'USDT', address: USDT_TOKEN_ADDRESS, decimals: 18 },
+    ];
+
+    const currentToken = TOKENS.find(t => t.address === selectedTokenAddr) || TOKENS[0];
+
+    // Check Allowance
+    const { data: allowance, refetch: refetchAllowance } = useReadContract({
+        address: selectedTokenAddr as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: currentWallet ? [currentWallet as `0x${string}`, ESCROW_PAYMENT_ADDRESS as `0x${string}`] : undefined,
+    });
 
     const { writeContract, data: hash, error: writeError, isPending: isTxPending } = useWriteContract();
     const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ hash });
@@ -36,7 +56,8 @@ export default function Simulate() {
 
     useEffect(() => {
         if (isSuccess) {
-            alert("Transaction Initiated Successfully!");
+            // alert("Transaction Completed / Confirmed!");
+            refetchAllowance();
         }
     }, [isSuccess]);
 
@@ -47,6 +68,8 @@ export default function Simulate() {
             setUiError(error.message || "An unexpected error occurred during the transaction.");
         }
     }, [writeError, confirmError]);
+
+    const needsApproval = allowance !== undefined && amount ? (parseFloat(amount) > 0 && (allowance as bigint) < parseUnits(amount, currentToken.decimals)) : false;
 
     const handleSimulate = async () => {
         try {
@@ -75,13 +98,27 @@ export default function Simulate() {
                 return;
             }
 
+            if (needsApproval) {
+                writeContract({
+                    address: selectedTokenAddr as `0x${string}`,
+                    abi: ERC20_ABI,
+                    functionName: 'approve',
+                    args: [
+                        ESCROW_PAYMENT_ADDRESS as `0x${string}`,
+                        parseUnits(amount, currentToken.decimals)
+                    ],
+                });
+                return;
+            }
+
             writeContract({
                 address: ESCROW_PAYMENT_ADDRESS as `0x${string}`,
                 abi: ESCROW_PAYMENT_ABI,
                 functionName: 'initiateTransaction',
                 args: [
                     merchant as `0x${string}`,
-                    parseEther(amount),
+                    selectedTokenAddr as `0x${string}`,
+                    parseUnits(amount, currentToken.decimals),
                     metadata
                 ],
             });
@@ -135,7 +172,19 @@ export default function Simulate() {
 
                         <div className="grid grid-cols-2 gap-6">
                             <div className="space-y-2">
-                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount (MNEE)</label>
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Token Selection</label>
+                                <select
+                                    value={selectedTokenAddr}
+                                    onChange={(e) => setSelectedTokenAddr(e.target.value)}
+                                    className="w-full bg-secondary/30 border rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none appearance-none"
+                                >
+                                    {TOKENS.map(t => (
+                                        <option key={t.address} value={t.address}>{t.name}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Amount ({currentToken.name})</label>
                                 <input
                                     type="number"
                                     value={amount}
@@ -143,10 +192,13 @@ export default function Simulate() {
                                     className="w-full bg-secondary/30 border rounded-2xl py-3 px-4 text-sm focus:ring-2 focus:ring-primary/20 outline-none"
                                 />
                             </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-6">
                             <div className="space-y-2">
                                 <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Escrow Window</label>
                                 <div className="w-full bg-secondary/20 border rounded-2xl py-3 px-4 text-sm text-muted-foreground italic">
-                                    24 Hours (Static)
+                                    24 Hours (Static Dispute Period)
                                 </div>
                             </div>
                         </div>
@@ -189,7 +241,7 @@ export default function Simulate() {
                                 </>
                             ) : (
                                 <>
-                                    Simulate Agent Purchase <ArrowRight className="w-5 h-5" />
+                                    {needsApproval ? `Approve ${currentToken.name}` : 'Simulate Agent Purchase'} <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
                         </button>
@@ -207,7 +259,7 @@ export default function Simulate() {
                         </div>
                         <div className="flex gap-4 items-start opacity-60">
                             <div className="w-6 h-6 rounded-full bg-blue-500/20 flex items-center justify-center text-[10px] font-bold shrink-0">2</div>
-                            <p className="text-xs leading-relaxed">EscrowPayment locks MNEE from User's wallet for 24 hours.</p>
+                            <p className="text-xs leading-relaxed">EscrowPayment locks {currentToken.name} from User's wallet for 24 hours.</p>
                         </div>
                         <div className="flex gap-4 items-start opacity-60 border-l-2 border-blue-500/30 ml-3 pl-7 py-2">
                             <p className="text-xs leading-relaxed italic text-blue-300">During this window, if the AI agent performs an unauthorized action, the User can file a dispute.</p>

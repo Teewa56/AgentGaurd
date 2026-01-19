@@ -94,8 +94,9 @@ export class BlockchainService {
         });
 
         // 3. Transaction Lifecycle Listeners
-        this.escrowContract.on("TransactionCreated", async (id: bigint, agent: string, merchant: string, amount: bigint) => {
-            console.log(`[Event] Transaction Created: ID ${id.toString()}, Agent ${agent}, Amount ${ethers.formatEther(amount)} MNEE`);
+        this.escrowContract.on("TransactionCreated", async (id: bigint, agent: string, merchant: string, token: string, amount: bigint) => {
+            const decimals = token.toLowerCase() === process.env.MNEE_TOKEN_ADDRESS?.toLowerCase() ? 18 : 6;
+            console.log(`[Event] Transaction Created: ID ${id.toString()}, Agent ${agent}, Token ${token}, Amount ${ethers.formatUnits(amount, decimals)}`);
 
             // Add delay to mitigate race conditions with chain state
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -109,6 +110,7 @@ export class BlockchainService {
                     txId: Number(id),
                     agentAddress: agent,
                     userAddress: txData.user,
+                    tokenAddress: token,
                     amount: amount.toString(),
                     serviceId: merchant, // Using merchant as serviceId for simplicity
                     metadataURI: txData.metadataURI,

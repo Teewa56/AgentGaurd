@@ -10,6 +10,12 @@ import {
 import { useTransactions, Transaction } from '@/hooks/useTransactions';
 import { useState } from 'react';
 import Link from 'next/link';
+import {
+    MNEE_TOKEN_ADDRESS,
+    USDC_TOKEN_ADDRESS,
+    USDT_TOKEN_ADDRESS,
+    getTokenSymbol
+} from '@/lib/contracts';
 
 export default function Transactions() {
     const [filterAgent, setFilterAgent] = useState('');
@@ -38,12 +44,13 @@ export default function Transactions() {
                         <button
                             onClick={() => {
                                 if (!transactions || transactions.length === 0) return;
-                                const headers = ["Tx Hash", "Agent", "Merchant", "Amount (MNEE)", "Timestamp", "Status"];
+                                const headers = ["Tx Hash", "Agent", "Merchant", "Amount", "Token", "Timestamp", "Status"];
                                 const rows = transactions.map(tx => [
                                     tx.hash,
                                     tx.agent,
                                     tx.to,
                                     tx.value.replace(/,/g, ''),
+                                    getTokenSymbol(tx.token),
                                     new Date(tx.timestamp).toISOString(),
                                     tx.status
                                 ]);
@@ -125,7 +132,7 @@ export default function Transactions() {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5">
-                                                    <span className="text-sm font-black italic tracking-tight">{tx.value} MNEE</span>
+                                                    <span className="text-sm font-black italic tracking-tight">{tx.value} {getTokenSymbol(tx.token)}</span>
                                                 </td>
                                                 <td className="px-6 py-5">
                                                     <span className="text-xs font-medium text-muted-foreground">

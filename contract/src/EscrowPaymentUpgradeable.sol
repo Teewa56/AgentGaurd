@@ -221,9 +221,10 @@ contract EscrowPaymentUpgradeable is
         require(REGISTRY.isAgentActive(agent), "Agent not active");
         require(BOND.hasSufficientBond(agent), "Insufficient reputation bond");
 
-        // Check charter and record spending
+        // Check charter and record spending (Normalize to 18 decimals for limit check)
+        uint256 normalizedAmount = _normalizeAmount(token, amount);
         require(
-            REGISTRY.authorizeAndRecordTransaction(agent, amount),
+            REGISTRY.authorizeAndRecordTransaction(agent, normalizedAmount),
             "Charter violation"
         );
 
@@ -492,9 +493,28 @@ contract EscrowPaymentUpgradeable is
     /**
      * @dev Get batch payment details
      */
+    /**
+     * @dev Get batch payment details
+     */
     function getBatchPayment(
         uint256 batchId
     ) external view returns (BatchPayment memory) {
         return batchPayments[batchId];
+    }
+
+    /**
+     * @dev Normalizes an amount to 18 decimals for consistent limit checking
+     */
+    function _normalizeAmount(
+        address token,
+        uint256 amount
+    ) internal view returns (uint256) {
+        try MockERC20(token).decimals() returns (uint8 decimals) {
+            if (decimals == 18) return amount;
+            if (decimals < 18) return amount * (10 ** (18 - decimals));
+            return amount / (10 ** (decimals - 18));
+        } catch {
+            return amount; // Default to 18 if unknown
+        }
     }
 }

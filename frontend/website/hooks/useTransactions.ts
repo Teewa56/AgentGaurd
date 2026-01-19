@@ -7,6 +7,7 @@ export interface Transaction {
     agent: string;
     to: string;
     value: string;
+    token: string;
     timestamp: number;
     status: 'Settled' | 'Failed' | 'Disputed' | 'Escrowed';
     metadataURI?: string;

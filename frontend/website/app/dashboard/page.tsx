@@ -15,6 +15,7 @@ import { useAgents } from '@/hooks/useAgents';
 import { useTransactions } from '@/hooks/useTransactions';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { getTokenSymbol } from '@/lib/contracts';
 
 export default function Dashboard() {
     const { data: stats, isLoading: statsLoading } = useStats();
@@ -137,7 +138,7 @@ export default function Dashboard() {
                                     <div>
                                         <h4 className="text-sm font-bold">{activity.status} Transaction</h4>
                                         <p className="text-xs text-muted-foreground mt-0.5">
-                                            {activity.agent.substring(0, 6)}... paid {activity.to}
+                                            {activity.agent.substring(0, 6)}... paid {activity.value} {getTokenSymbol(activity.token)} to {activity.to}
                                         </p>
                                         <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1 block tracking-wider">
                                             {new Date(activity.timestamp).toLocaleTimeString()}
