@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../lib/openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import "../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
@@ -509,7 +509,7 @@ contract EscrowPaymentUpgradeable is
         address token,
         uint256 amount
     ) internal view returns (uint256) {
-        try MockERC20(token).decimals() returns (uint8 decimals) {
+        try IERC20Metadata(token).decimals() returns (uint8 decimals) {
             if (decimals == 18) return amount;
             if (decimals < 18) return amount * (10 ** (18 - decimals));
             return amount / (10 ** (decimals - 18));

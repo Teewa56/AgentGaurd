@@ -31,34 +31,27 @@ contract DeployProxies is Script {
     function run() external {
         vm.startBroadcast();
 
-        // Check for existing tokens or deploy mocks
-        mneeToken = vm.envOr("MNEE_TOKEN_ADDRESS", address(0));
-        usdtToken = vm.envOr("USDT_TOKEN_ADDRESS", address(0));
-        usdcToken = vm.envOr("USDC_TOKEN_ADDRESS", address(0));
+        // Deploy MNEE first to capture the actual broadcasted account's address
+        MockERC20 mnee = new MockERC20("Mock MNEE", "MNEE", 18);
+        mneeToken = address(mnee);
 
-        if (mneeToken == address(0)) {
-            console.log("Deploying Mock MNEE...");
-            MockERC20 mnee = new MockERC20("Mock MNEE", "MNEE", 18);
-            mnee.mint(msg.sender, 1000000 * 1e18);
-            mneeToken = address(mnee);
-        }
+        // Capture the actual account (the one provided via --account or --sender)
+        address deployer = mnee.owner();
 
-        if (usdtToken == address(0)) {
-            console.log("Deploying Mock USDT...");
-            MockERC20 usdt = new MockERC20("Mock USDT", "USDT", 6);
-            usdt.mint(msg.sender, 1000000 * 1e6);
-            usdtToken = address(usdt);
-        }
+        console.log("Foundry Script Runner:", tx.origin);
+        console.log("Actual Broadcast Account:", deployer);
 
-        if (usdcToken == address(0)) {
-            console.log("Deploying Mock USDC...");
-            MockERC20 usdc = new MockERC20("Mock USDC", "USDC", 6);
-            usdc.mint(msg.sender, 1000000 * 1e6);
-            usdcToken = address(usdc);
-        }
+        MockERC20 usdt = new MockERC20("Mock USDT", "USDT", 6);
+        usdtToken = address(usdt);
+        MockERC20 usdc = new MockERC20("Mock USDC", "USDC", 6);
+        usdcToken = address(usdc);
+
+        console.log("Minting tokens to:", deployer);
+        mnee.mint(deployer, 1000000 * 1e18);
+        usdt.mint(deployer, 1000000 * 1e6);
+        usdc.mint(deployer, 1000000 * 1e6);
 
         console.log("Deploying AgentGuard contracts with UUPS proxies...");
-        console.log("Deployer:", msg.sender);
         console.log("MNEE Token:", mneeToken);
         console.log("USDT Token:", usdtToken);
         console.log("USDC Token:", usdcToken);
@@ -73,7 +66,7 @@ contract DeployProxies is Script {
         // 2. Deploy ReputationBond (non-upgradeable for now)
         console.log("2. Deploying ReputationBond...");
         ReputationBond reputationBond = new ReputationBond(
-            mneeToken,
+            address(mnee),
             agentRegistryProxy
         );
         reputationBondProxy = address(reputationBond);
@@ -86,7 +79,7 @@ contract DeployProxies is Script {
 
         bytes memory escrowInitData = abi.encodeWithSelector(
             EscrowPaymentUpgradeable.initialize.selector,
-            mneeToken,
+            address(mnee),
             agentRegistryProxy,
             reputationBondProxy
         );
