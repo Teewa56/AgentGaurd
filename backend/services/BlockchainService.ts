@@ -106,7 +106,7 @@ export class BlockchainService {
                 const txData = await this.escrowContract.transactions(id);
                 console.log(`[Sync] Syncing Tx ${id.toString()} for Agent ${agent}...`);
 
-                const savedTx = await TxRepo.create({
+                const savedTx = await TxRepo.create({// this is saving the transactions to the database but its not working
                     txId: Number(id),
                     agentAddress: agent,
                     userAddress: txData.user,

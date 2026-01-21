@@ -1,5 +1,5 @@
 'use client';
-
+//on this page, we are to upload the metadata to IPFS before we then uplaod the URL of the data to the smart contract
 import { DashboardLayout } from '@/components/DashboardLayout';
 import {
     Send,
@@ -32,8 +32,8 @@ export default function Simulate() {
 
     const TOKENS = [
         { name: 'MNEE', address: MNEE_TOKEN_ADDRESS, decimals: 18 },
-        { name: 'USDC', address: USDC_TOKEN_ADDRESS, decimals: 18 },
-        { name: 'USDT', address: USDT_TOKEN_ADDRESS, decimals: 18 },
+        { name: 'USDC', address: USDC_TOKEN_ADDRESS, decimals: 6 },
+        { name: 'USDT', address: USDT_TOKEN_ADDRESS, decimals: 6 },
     ];
 
     const currentToken = TOKENS.find(t => t.address === selectedTokenAddr) || TOKENS[0];
