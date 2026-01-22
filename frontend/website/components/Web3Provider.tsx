@@ -22,10 +22,10 @@ import { http } from 'viem';
 
 const config = getDefaultConfig({
     appName: 'AgentGuard',
-    projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
+    projectId: process.env.NEXT_PUBLIC_PROJECT_ID!,
     chains: [baseSepolia],
     transports: {
-        [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_URL), 
+        [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_URL!),
     },
     ssr: true,
 });

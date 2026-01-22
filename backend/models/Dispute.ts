@@ -5,6 +5,7 @@ export interface IDispute extends Document {
     agentAddress: string;
     userAddress: string;
     amount: string; // Stored as string to handle large numbers (Wei)
+    reason?: string;
     status: 'Pending' | 'Arbitrating' | 'Resolved' | 'Appealed';
     claudeAnalysis?: string; // Kept name for compatibility, can be generic 'aiAnalysis'
     refundPercent?: number;
@@ -17,6 +18,7 @@ const DisputeSchema: Schema = new Schema({
     agentAddress: { type: String, required: true },
     userAddress: { type: String, required: true },
     amount: { type: String, required: true },
+    reason: { type: String },
     status: { type: String, enum: ['Pending', 'Arbitrating', 'Resolved', 'Appealed'], default: 'Pending' },
     claudeAnalysis: { type: String },
     refundPercent: { type: Number },

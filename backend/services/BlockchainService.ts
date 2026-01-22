@@ -12,7 +12,7 @@ dotenv.config();
 
 export class BlockchainService {
     private provider: ethers.JsonRpcProvider;
-    private wallet: ethers.Wallet;
+    private wallet: any;
     private escrowContract: ethers.Contract;
     private disputeContract: ethers.Contract;
     private registryContract: ethers.Contract;
@@ -61,7 +61,7 @@ export class BlockchainService {
 
                 const agentData = {
                     user: dbUser?._id as any,
-                    address: agentAddress,
+                    address: agentAddress.toLowerCase(),
                     charter: "On-chain Registered Agent",
                     dailySpendingLimit: charter.dailySpendingLimit.toString(),
                     monthlySpendingLimit: charter.monthlySpendingLimit.toString(),
@@ -132,11 +132,11 @@ export class BlockchainService {
 
                 const savedTx = await TxRepo.create({
                     txId: Number(id),
-                    agentAddress: agent,
-                    userAddress: txData.user,
-                    tokenAddress: token,
+                    agentAddress: agent.toLowerCase(),
+                    userAddress: txData.user.toLowerCase(),
+                    tokenAddress: token.toLowerCase(),
                     amount: amount.toString(),
-                    serviceId: merchant,
+                    serviceId: merchant.toLowerCase(),
                     metadataURI: txData.metadataURI,
                     status: 'Initiated'
                 });

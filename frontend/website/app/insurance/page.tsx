@@ -26,6 +26,7 @@ export default function Insurance() {
     const { data: agents } = useAgents();
     const [selectedAgent, setSelectedAgent] = useState('');
     const [amount, setAmount] = useState('500');
+    const [step, setStep] = useState<'idle' | 'approving' | 'staking'>('idle');
     const [approveHash, setApproveHash] = useState<`0x${string}` | undefined>();
     const [stakeHash, setStakeHash] = useState<`0x${string}` | undefined>();
 
