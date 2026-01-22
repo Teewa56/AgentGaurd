@@ -1,28 +1,48 @@
 import Joi from 'joi';
 
+const ethereumAddress = Joi.string().regex(/^0x[a-fA-F0-9]{40}$/).messages({
+    'string.pattern.base': 'Address must be a valid Ethereum address'
+});
+
+export const authSchemas = {
+    register: Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().min(8).required(),
+        role: Joi.string().valid('user', 'agent', 'admin').default('user'),
+        walletAddress: ethereumAddress.required()
+    }),
+    login: Joi.object({
+        email: Joi.string().email().required(),
+        password: Joi.string().required(),
+        walletAddress: ethereumAddress.required()
+    })
+};
+
 export const agentSchemas = {
     register: Joi.object({
-        address: Joi.string().pattern(/^0x[a-fA-F0-0]{40}$/).required(),
-        charter: Joi.string().max(500).required(),
-        dailySpendingLimit: Joi.number().min(0).required(),
-        monthlySpendingLimit: Joi.number().min(0).required(),
-        transactionLimit: Joi.number().min(0).required()
+        address: ethereumAddress.required(),
+        charter: Joi.string().max(1000).required(),
+        dailySpendingLimit: Joi.string().regex(/^\d+$/).required().messages({
+            'string.pattern.base': 'Daily spending limit must be a numeric string (Wei)'
+        }),
+        monthlySpendingLimit: Joi.string().regex(/^\d+$/).required(),
+        transactionLimit: Joi.string().regex(/^\d+$/).required()
     }),
     update: Joi.object({
-        charter: Joi.string().max(500),
-        dailySpendingLimit: Joi.number().min(0),
-        monthlySpendingLimit: Joi.number().min(0),
-        transactionLimit: Joi.number().min(0),
+        charter: Joi.string().max(1000),
+        dailySpendingLimit: Joi.string().regex(/^\d+$/),
+        monthlySpendingLimit: Joi.string().regex(/^\d+$/),
+        transactionLimit: Joi.string().regex(/^\d+$/),
         isActive: Joi.boolean()
     }),
     registerCLI: Joi.object({
-        address: Joi.string().pattern(/^0x[a-fA-F0-0]{40}$/).required(),
+        address: ethereumAddress.required(),
         name: Joi.string().max(100).required(),
-        description: Joi.string().max(500).required(),
+        description: Joi.string().max(1000).required(),
         spendingLimits: Joi.object({
-            daily: Joi.number().min(0).required(),
-            monthly: Joi.number().min(0).required(),
-            perTx: Joi.number().min(0).required()
+            daily: Joi.string().regex(/^\d+$/).required(),
+            monthly: Joi.string().regex(/^\d+$/).required(),
+            perTx: Joi.string().regex(/^\d+$/).required()
         }).required(),
         allowedTasks: Joi.array().items(Joi.string()).required()
     })

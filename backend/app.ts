@@ -20,15 +20,29 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'"],
+            styleSrc: ["'self'", "'unsafe-inline'"],
+            imgSrc: ["'self'", "data:", "https:"],
+            connectSrc: ["'self'", "https://base-sepolia.g.alchemy.com", "https://api.studio.thegraph.com"]
+        }
+    },
+    crossOriginEmbedderPolicy: false
+}));
+
 app.use(cors({
     credentials: true,
-    origin: SECURITY_CONFIG.CORS_ORIGIN,
+    origin: SECURITY_CONFIG.CORS_ORIGIN || 'http://localhost:3000',
     methods: ['GET', 'PUT', 'POST', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Payment-Proof', 'X-Agent-Address', 'X-CLI-API-Key', 'X-CLI-Version']
 }));
+
 app.use(morgan('dev'));
-app.use(express.json({ limit: '10kb' })); // Body limit
+app.use(express.json({ limit: '10kb' })); // Body limit to prevent DoS
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 app.use(cookieParser());
 app.use(mongoSanitize()); // Data sanitization against NoSQL query injection
 

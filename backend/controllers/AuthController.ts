@@ -19,7 +19,7 @@ export class AuthController {
             if (!walletAddress) {
                 return res.status(400).json({ message: "Wallet address is required" });
             }
-            const salt = await bcrypt.genSalt(parseInt(SECURITY_CONFIG.BCRYPT_SALT_ROUNDS));
+            const salt = await bcrypt.genSalt(parseInt(SECURITY_CONFIG.BCRYPT_SALT_ROUNDS as any));
             const passwordHash = await bcrypt.hash(password, salt);
 
             const newUser = new User({
@@ -59,25 +59,31 @@ export class AuthController {
             const accessToken = jwt.sign(
                 { id: user._id, role: user.role },
                 SECURITY_CONFIG.JWT_SECRET,
-                { expiresIn: SECURITY_CONFIG.JWT_EXPIRES_IN }
+                { expiresIn: SECURITY_CONFIG.JWT_EXPIRES_IN as any }
             );
 
             // Generate Refresh Token (Long Lived)
             const refreshToken = jwt.sign(
                 { id: user._id, role: user.role },
                 SECURITY_CONFIG.JWT_REFRESH_SECRET,
-                { expiresIn: SECURITY_CONFIG.JWT_REFRESH_EXPIRES_IN }
+                { expiresIn: SECURITY_CONFIG.JWT_REFRESH_EXPIRES_IN as any }
             );
 
             res.cookie('refreshToken', refreshToken, {
                 httpOnly: true,
-                secure: true, // Always true for SameSite=None
+                secure: true,
                 sameSite: 'none',
                 maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
             });
 
+            res.cookie('accessToken', accessToken, {
+                httpOnly: true,
+                secure: true,
+                sameSite: 'none',
+                maxAge: 15 * 60 * 1000 // 15 minutes
+            });
+
             res.json({
-                accessToken,
                 user: { id: user._id, email: user.email, role: user.role }
             });
         } catch (error) {
@@ -96,14 +102,20 @@ export class AuthController {
             try {
                 const decoded: any = jwt.verify(refreshToken, SECURITY_CONFIG.JWT_REFRESH_SECRET);
 
-                // Generate new Access Token
                 const accessToken = jwt.sign(
                     { id: decoded.id, role: decoded.role },
                     SECURITY_CONFIG.JWT_SECRET,
-                    { expiresIn: SECURITY_CONFIG.JWT_EXPIRES_IN }
+                    { expiresIn: SECURITY_CONFIG.JWT_EXPIRES_IN as any }
                 );
 
-                res.json({ accessToken });
+                res.cookie('accessToken', accessToken, {
+                    httpOnly: true,
+                    secure: true,
+                    sameSite: 'none',
+                    maxAge: 15 * 60 * 1000 // 15 minutes
+                });
+
+                res.json({ message: "Token refreshed" });
             } catch (err) {
                 throw new UnauthorizedError("Invalid refresh token");
             }

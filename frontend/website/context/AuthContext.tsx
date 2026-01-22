@@ -34,15 +34,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     useEffect(() => {
         const initAuth = async () => {
-            const token = Cookies.get('accessToken');
-            const user = Cookies.get('user');
+            const isLoggedIn = Cookies.get('isLoggedIn');
+            const userStr = Cookies.get('user');
 
-            if (token) {
+            if (isLoggedIn && userStr) {
                 try {
-                    user ? setUser(JSON.parse(user)) : setUser(null);
+                    setUser(JSON.parse(userStr));
                 } catch (e) {
                     console.error("Failed to parse user data", e);
-                    Cookies.remove('accessToken');
+                    logout();
                 }
             }
             setLoading(false);
@@ -52,14 +52,23 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const login = (token: string, userData: User) => {
-        Cookies.set('accessToken', token, { secure: true, sameSite: 'none', expires: 1 });
+        // Token is now set via httpOnly cookie from backend, but we keep this signature for compatibility
+        // or for cases where we might still need it (e.g. mobile apps).
+        // For web, we rely on the backend setting 'accessToken' cookie.
+        Cookies.set('isLoggedIn', 'true', { secure: true, sameSite: 'none', expires: 1 });
         Cookies.set('user', JSON.stringify(userData), { secure: true, sameSite: 'none', expires: 7 });
         setUser(userData);
         router.push('/dashboard');
     };
 
-    const logout = () => {
-        Cookies.remove('accessToken');
+    const logout = async () => {
+        try {
+            await api.post('/auth/logout');
+        } catch (e) {
+            console.error("Logout request failed", e);
+        }
+        Cookies.remove('isLoggedIn');
+        Cookies.remove('user');
         setUser(null);
         router.push('/auth/login');
     };

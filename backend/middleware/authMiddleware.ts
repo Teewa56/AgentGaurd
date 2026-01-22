@@ -9,10 +9,13 @@ export interface AuthRequest extends Request {
 
 export const authenticateToken = (req: AuthRequest, res: Response, next: NextFunction) => {
     const authHeader: any = req.headers['authorization'];
-    const token = authHeader?.split(' ')[1];
+    const headerToken = authHeader?.split(' ')[1];
+    const cookieToken = req.cookies?.accessToken;
+
+    const token = cookieToken || headerToken;
 
     if (!token) {
-        console.error(`[Auth] No token provided. Headers: ${JSON.stringify(req.headers)}`);
+        console.error(`[Auth] No token provided. Headers: ${JSON.stringify(req.headers)}, Cookies: ${JSON.stringify(req.cookies)}`);
         return next(new UnauthorizedError('No token provided'));
     }
 
