@@ -8,7 +8,8 @@ export class AnalyticsController {
     static async getDashboardStats(req: Request, res: Response, next: NextFunction) {
         try {
             const userId = (req as any).user?.id;
-            const cached = await CacheService.get(`dashboard_stats_${userId}`);
+            const cacheKey = `dashboard_stats_v2_${userId}`;
+            const cached = await CacheService.get(cacheKey);
             if (cached) {
                 return res.json(cached);
             }
@@ -49,7 +50,7 @@ export class AnalyticsController {
                 totalTransactions
             };
 
-            await CacheService.set(`dashboard_stats_${userId}`, stats, 60 * 60); // Cache for 1 hour
+            await CacheService.set(cacheKey, stats, 60 * 60); // Cache for 1 hour
 
             res.json(stats);
 

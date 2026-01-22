@@ -27,10 +27,18 @@ export default function Dashboard() {
         return <DashboardSkeleton />;
     }
 
+    const safeBigInt = (val: any) => {
+        if (!val) return 0n;
+        if (typeof val === 'bigint') return val;
+        // Remove commas and other non-numeric characters before parsing
+        const clean = String(val).replace(/[^0-9]/g, '');
+        return BigInt(clean || '0');
+    };
+
     // Default to 0/empty if data fetch fails or is pending
     const displayStats = [
         { label: 'Total Reputation', value: stats?.totalReputation || 0, icon: Shield, color: 'text-blue-600', trend: 'Global Score' },
-        { label: 'Total Staked', value: `${stats?.totalStaked ? Number(formatEther(BigInt(stats.totalStaked))).toLocaleString() : 0} MNEE`, icon: TrendingUp, color: 'text-indigo-600', trend: 'Across agents' },
+        { label: 'Total Staked', value: `${stats?.totalStaked ? Number(formatEther(safeBigInt(stats.totalStaked))).toLocaleString() : 0} MNEE`, icon: TrendingUp, color: 'text-indigo-600', trend: 'Across agents' },
         { label: 'Active Disputes', value: stats?.activeDisputes || 0, icon: AlertTriangle, color: 'text-amber-600', trend: 'Requires attention' },
         { label: 'Success Rate', value: `${stats?.successRate || 100}%`, icon: CheckCircle2, color: 'text-emerald-600', trend: `from ${stats?.totalTransactions || 0} txs` },
     ];
