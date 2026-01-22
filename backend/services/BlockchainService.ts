@@ -78,13 +78,14 @@ export class BlockchainService {
 
         // 2. Bond Staking & Reputation Listener
         this.bondContract.on("BondStaked", async (agentAddress: string, amount: bigint) => {
-            console.log(`[Event] Bond Staked: ${agentAddress} (+${ethers.formatEther(amount)} MNEE)`);
+            const normalizedAddress = agentAddress.toLowerCase();
+            console.log(`[Event] Bond Staked: ${normalizedAddress} (+${ethers.formatEther(amount)} MNEE)`);
             try {
-                const agent = await AgentRepo.findByAddress(agentAddress);
+                const agent = await AgentRepo.findByAddress(normalizedAddress);
                 if (agent) {
                     const newTotal = (BigInt(agent.stakedMnee || "0") + amount).toString();
-                    await AgentRepo.updateStats(agentAddress, { stakedMnee: newTotal });
-                    console.log(`[Sync] Success: Bond updated for ${agentAddress}. New Total: ${ethers.formatEther(newTotal)} MNEE`);
+                    await AgentRepo.updateStats(normalizedAddress, { stakedMnee: newTotal });
+                    console.log(`[Sync] Success: Bond updated for ${normalizedAddress}. New Total: ${ethers.formatEther(newTotal)} MNEE`);
                 } else {
                     console.warn(`[Sync] Warning: Received BondStaked for unknown agent ${agentAddress}. Syncing agent first...`);
                     // This can happen if BondStaked arrives before AgentRegistered

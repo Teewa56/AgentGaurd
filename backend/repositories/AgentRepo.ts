@@ -19,7 +19,7 @@ export class AgentRepo {
     }
 
     static async updateStats(address: string, updates: Partial<IAgent>): Promise<IAgent | null> {
-        return await Agent.findOneAndUpdate({ address }, updates, { new: true });
+        return await Agent.findOneAndUpdate({ address: address.toLowerCase() }, updates, { new: true });
     }
 
     static async findAll(): Promise<IAgent[]> {
