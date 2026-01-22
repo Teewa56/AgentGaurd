@@ -8,7 +8,7 @@ import { NotFoundError, ValidationError, UnauthorizedError } from '../utils/erro
 export class AgentController {
     static async register(req: Request, res: Response, next: NextFunction) {
         try {
-            const { address, charter, dailySpendingLimit, monthlySpendingLimit, transactionLimit } = req.body;
+            const { address, name, charter, dailySpendingLimit, monthlySpendingLimit, transactionLimit } = req.body;
 
             const userId = (req as any).user?.id;
 
@@ -29,6 +29,7 @@ export class AgentController {
             const newAgent = await AgentRepo.create({
                 user: userId,
                 address,
+                name,
                 charter,
                 dailySpendingLimit,
                 monthlySpendingLimit,
@@ -238,6 +239,10 @@ export class AgentController {
                 isActive: true
             });
 
+            if (!agent) {
+                throw new Error("Failed to create agent");
+            }
+
             res.status(201).json({
                 message: "Agent registered from CLI successfully",
                 agentId: agent._id,
@@ -252,7 +257,7 @@ export class AgentController {
 // Helper functions for analytics calculations
 function calculateRiskScore(performance: any): number {
     // Simple risk calculation based on dispute rate
-    const disputeRate = performance.disputes / Math.max(performance.totalTransactions, 1);
+    const disputeRate = performance.disputes / Math.max(performance.totalTx, 1);
     return Math.min(100, disputeRate * 1000);
 }
 
@@ -310,7 +315,7 @@ function analyzeMerchantPreferences(transactions: any[]): any {
     }, {} as Record<string, number>);
 
     return {
-        topMerchants: Object.entries(merchantCounts)
+        topMerchants: (Object.entries(merchantCounts) as [string, number][])
             .sort(([, a], [, b]) => b - a)
             .slice(0, 5)
             .map(([merchant, count]) => ({ merchant, count }))

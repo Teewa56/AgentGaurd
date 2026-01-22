@@ -21,6 +21,8 @@ export const authSchemas = {
 export const agentSchemas = {
     register: Joi.object({
         address: ethereumAddress.required(),
+        name: Joi.string().max(100),
+        description: Joi.string().max(1000),
         charter: Joi.string().max(1000).required(),
         dailySpendingLimit: Joi.string().regex(/^\d+$/).required().messages({
             'string.pattern.base': 'Daily spending limit must be a numeric string (Wei)'
@@ -29,6 +31,8 @@ export const agentSchemas = {
         transactionLimit: Joi.string().regex(/^\d+$/).required()
     }),
     update: Joi.object({
+        name: Joi.string().max(100),
+        description: Joi.string().max(1000),
         charter: Joi.string().max(1000),
         dailySpendingLimit: Joi.string().regex(/^\d+$/),
         monthlySpendingLimit: Joi.string().regex(/^\d+$/),
