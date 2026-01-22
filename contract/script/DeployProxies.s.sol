@@ -127,11 +127,23 @@ contract DeployProxies is Script {
 
         // 7. Set authorized contracts
         console.log("7. Configuring contract permissions...");
+
+        // LINK AgentRegistry to EscrowPayment
+        agentRegistry.setEscrowPayment(escrowPaymentProxy);
+        console.log("   AgentRegistry: EscrowPayment address set");
+
+        // LINK ReputationBond to EscrowPayment & DisputeResolution
+        reputationBond.setAuthorizedContracts(
+            escrowPaymentProxy,
+            disputeResolutionProxy
+        );
+        console.log("   ReputationBond: Authorized contracts set");
+
         EscrowPaymentUpgradeable(escrowPaymentProxy).setAuthorizedContracts(
             insurancePoolProxy,
             disputeResolutionProxy
         );
-        console.log("   EscrowPayment authorized contracts set");
+        console.log("   EscrowPayment: Authorized contracts set");
 
         // Whitelist Tokens
         console.log("   Whitelisting tokens...");
