@@ -19,51 +19,86 @@ import {
 } from '@/lib/contracts';
 import { parseEther, formatEther } from 'viem';
 import { useAgents } from '@/hooks/useAgents';
+import { useReadContract } from 'wagmi';
 
 export default function Insurance() {
     const { address: userAddress } = useAccount();
     const { data: agents } = useAgents();
     const [selectedAgent, setSelectedAgent] = useState('');
     const [amount, setAmount] = useState('500');
-    const [step, setStep] = useState<'idle' | 'approving' | 'staking'>('idle');
+    const [approveHash, setApproveHash] = useState<`0x${string}` | undefined>();
+    const [stakeHash, setStakeHash] = useState<`0x${string}` | undefined>();
 
-    const { writeContract, data: hash } = useWriteContract();
-    const { isSuccess: isConfirmed, isLoading: isConfirming } = useWaitForTransactionReceipt({ hash });
+    const { writeContractAsync } = useWriteContract();
+
+    // 1. Check Allowance
+    const { data: allowance, refetch: refetchAllowance } = useReadContract({
+        address: MNEE_TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [userAddress as `0x${string}`, REPUTATION_BOND_ADDRESS as `0x${string}`],
+        query: { enabled: !!userAddress }
+    });
+
+    const { isLoading: isApproving, isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({ hash: approveHash });
+    const { isLoading: isStaking, isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({ hash: stakeHash });
 
     const handleStake = async () => {
         if (!selectedAgent || !amount) return;
+        const amountWei = parseEther(amount);
 
-        setStep('approving');
-        // 1. Approve
-        writeContract({
-            address: MNEE_TOKEN_ADDRESS as `0x${string}`,
-            abi: ERC20_ABI,
-            functionName: 'approve',
-            args: [REPUTATION_BOND_ADDRESS as `0x${string}`, parseEther(amount)],
-        });
+        try {
+            // Check if we need approval
+            if (!allowance || (allowance as bigint) < amountWei) {
+                setStep('approving');
+                const hash = await writeContractAsync({
+                    address: MNEE_TOKEN_ADDRESS as `0x${string}`,
+                    abi: ERC20_ABI,
+                    functionName: 'approve',
+                    args: [REPUTATION_BOND_ADDRESS as `0x${string}`, amountWei],
+                });
+                setApproveHash(hash);
+            } else {
+                handleActualStake();
+            }
+        } catch (error) {
+            console.error("Stake pre-flight failed:", error);
+            setStep('idle');
+        }
     };
 
-    const handleActualStake = () => {
+    const handleActualStake = async () => {
         setStep('staking');
-        writeContract({
-            address: REPUTATION_BOND_ADDRESS as `0x${string}`,
-            abi: REPUTATION_BOND_ABI,
-            functionName: 'stakeBond',
-            args: [selectedAgent as `0x${string}`, parseEther(amount)],
-        });
+        try {
+            const amountWei = parseEther(amount);
+            const hash = await writeContractAsync({
+                address: REPUTATION_BOND_ADDRESS as `0x${string}`,
+                abi: REPUTATION_BOND_ABI,
+                functionName: 'stakeBond',
+                args: [selectedAgent as `0x${string}`, amountWei],
+            });
+            setStakeHash(hash);
+        } catch (error) {
+            console.error("Actual stake failed:", error);
+            setStep('idle');
+        }
     }
 
     useEffect(() => {
-        if (isConfirmed) {
-            if (step === 'approving') {
-                handleActualStake();
-            } else if (step === 'staking') {
-                alert('Stake Successful!');
-                setStep('idle');
-                setAmount('');
-            }
+        if (isApproveSuccess) {
+            refetchAllowance().then(() => handleActualStake());
         }
-    }, [isConfirmed]);
+    }, [isApproveSuccess]);
+
+    useEffect(() => {
+        if (isStakeSuccess) {
+            alert('Stake Successful!');
+            setStep('idle');
+            setAmount('');
+            setStakeHash(undefined);
+            setApproveHash(undefined);
+        }
+    }, [isStakeSuccess]);
 
     return (
         <DashboardLayout>
@@ -110,12 +145,12 @@ export default function Insurance() {
 
                                 <button
                                     onClick={handleStake}
-                                    disabled={!selectedAgent || !amount || isConfirming || step !== 'idle'}
+                                    disabled={!selectedAgent || !amount || isApproving || isStaking || step !== 'idle'}
                                     className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.01] transition-all disabled:opacity-50"
                                 >
-                                    {step === 'approving' ? 'Approving MNEE...' :
-                                        step === 'staking' ? 'Confirming Stake...' :
-                                            isConfirming ? 'Processing...' : 'Stake Reputation Bond'}
+                                    {isApproving ? 'Approving MNEE...' :
+                                        isStaking ? 'Confirming Stake...' :
+                                            'Stake Reputation Bond'}
                                 </button>
                             </div>
                         </div>

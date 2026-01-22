@@ -5,9 +5,9 @@ export interface IAgent extends Document {
     address: string;
     name: string;
     charter: string;
-    dailySpendingLimit: number;
-    monthlySpendingLimit: number;
-    transactionLimit: number;
+    dailySpendingLimit: string;
+    monthlySpendingLimit: string;
+    transactionLimit: string;
     isActive: boolean;
     stakedMnee: string;
     reputation: number;
@@ -15,13 +15,13 @@ export interface IAgent extends Document {
 }
 
 const AgentSchema: Schema = new Schema({
-    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: false },
     address: { type: String, required: true, unique: true },
     name: { type: String, default: 'Unnamed Agent' },
     charter: { type: String, required: true },
-    dailySpendingLimit: { type: Number, default: 0 },
-    monthlySpendingLimit: { type: Number, default: 0 },
-    transactionLimit: { type: Number, default: 0 },
+    dailySpendingLimit: { type: String, default: '0' },
+    monthlySpendingLimit: { type: String, default: '0' },
+    transactionLimit: { type: String, default: '0' },
     isActive: { type: Boolean, default: true },
     stakedMnee: { type: String, default: '0' },
     reputation: { type: Number, default: 500 },

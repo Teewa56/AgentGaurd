@@ -18,10 +18,15 @@ import {
     QueryClient,
 } from "@tanstack/react-query";
 
+import { http } from 'viem';
+
 const config = getDefaultConfig({
     appName: 'AgentGuard',
-    projectId: 'YOUR_PROJECT_ID', // Usually from WalletConnect Cloud
-    chains: [mainnet, sepolia, base, baseSepolia],
+    projectId: process.env.NEXT_PUBLIC_PROJECT_ID,
+    chains: [baseSepolia],
+    transports: {
+        [baseSepolia.id]: http(process.env.NEXT_PUBLIC_ALCHEMY_URL), 
+    },
     ssr: true,
 });
 

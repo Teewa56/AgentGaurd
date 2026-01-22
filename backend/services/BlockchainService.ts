@@ -35,6 +35,10 @@ export class BlockchainService {
         this.bondContract = new ethers.Contract(CONTRACTS.REPUTATION_BOND.ADDRESS, CONTRACTS.REPUTATION_BOND.ABI, this.wallet);
 
         this.geminiService = new GeminiService();
+        console.log(`[Blockchain] Initialized with RPC: ${process.env.RPC_URL}`);
+        console.log(`[Blockchain] Escrow: ${this.escrowContract.target}`);
+        console.log(`[Blockchain] Registry: ${this.registryContract.target}`);
+        console.log(`[Blockchain] Bond: ${this.bondContract.target}`);
     }
 
     async listenForEvents() {
@@ -49,24 +53,26 @@ export class BlockchainService {
         this.registryContract.on("AgentRegistered", async (agentAddress: string, userAddress: string) => {
             console.log(`[Event] Agent Registered: ${agentAddress} (Owner: ${userAddress})`);
             try {
-                // Find or create user in DB based on wallet address
-                let dbUser = await User.findOne({ walletAddress: userAddress });
+                // Find user in DB if exists (optional now)
+                const dbUser = await User.findOne({ walletAddress: { $regex: new RegExp(`^${userAddress}$`, 'i') } });
 
                 // Fetch charter from contract to sync initial limits
                 const charter = await this.registryContract.agentCharters(agentAddress);
 
-                await AgentRepo.create({
-                    user: dbUser?._id, // Linked if user has linked their wallet
+                const agentData = {
+                    user: dbUser?._id as any,
                     address: agentAddress,
                     charter: "On-chain Registered Agent",
-                    dailySpendingLimit: Number(charter.dailySpendingLimit),
-                    monthlySpendingLimit: Number(charter.monthlySpendingLimit),
-                    transactionLimit: Number(charter.spendingLimitPerTx),
+                    dailySpendingLimit: charter.dailySpendingLimit.toString(),
+                    monthlySpendingLimit: charter.monthlySpendingLimit.toString(),
+                    transactionLimit: charter.spendingLimitPerTx.toString(),
                     isActive: true
-                });
-                console.log(`[Sync] Agent ${agentAddress} synced to DB.`);
+                };
+
+                await AgentRepo.create(agentData);
+                console.log(`[Sync] Success: Agent ${agentAddress} synced to DB. ${dbUser ? 'Linked to user: ' + dbUser.email : 'Unlinked.'}`);
             } catch (err) {
-                console.error("Failed to sync AgentRegistered event:", err);
+                console.error(`[Sync] Error: Failed to sync AgentRegistered event for ${agentAddress}:`, err);
             }
         });
 
@@ -78,9 +84,27 @@ export class BlockchainService {
                 if (agent) {
                     const newTotal = (BigInt(agent.stakedMnee || "0") + amount).toString();
                     await AgentRepo.updateStats(agentAddress, { stakedMnee: newTotal });
+                    console.log(`[Sync] Success: Bond updated for ${agentAddress}. New Total: ${ethers.formatEther(newTotal)} MNEE`);
+                } else {
+                    console.warn(`[Sync] Warning: Received BondStaked for unknown agent ${agentAddress}. Syncing agent first...`);
+                    // This can happen if BondStaked arrives before AgentRegistered
+                    const charter = await this.registryContract.agentCharters(agentAddress);
+                    const owner = await this.registryContract.agentToUser(agentAddress);
+                    const dbUser = await User.findOne({ walletAddress: { $regex: new RegExp(`^${owner}$`, 'i') } });
+
+                    await AgentRepo.create({
+                        user: dbUser?._id as any,
+                        address: agentAddress,
+                        charter: "Auto-synced from Bond Event",
+                        stakedMnee: amount.toString(),
+                        dailySpendingLimit: charter.dailySpendingLimit.toString(),
+                        monthlySpendingLimit: charter.monthlySpendingLimit.toString(),
+                        transactionLimit: charter.spendingLimitPerTx.toString(),
+                        isActive: true
+                    });
                 }
             } catch (err) {
-                console.error("Failed to sync BondStaked event:", err);
+                console.error(`[Sync] Error: Failed to sync BondStaked event for ${agentAddress}:`, err);
             }
         });
 
@@ -102,21 +126,21 @@ export class BlockchainService {
             await new Promise(resolve => setTimeout(resolve, 2000));
 
             try {
-                // Fetch full txn details from contract
+                // Fetch full txn details from contract to get metadataURI and user
                 const txData = await this.escrowContract.transactions(id);
                 console.log(`[Sync] Syncing Tx ${id.toString()} for Agent ${agent}...`);
 
-                const savedTx = await TxRepo.create({// this is saving the transactions to the database but its not working
+                const savedTx = await TxRepo.create({
                     txId: Number(id),
                     agentAddress: agent,
                     userAddress: txData.user,
                     tokenAddress: token,
                     amount: amount.toString(),
-                    serviceId: merchant, // Using merchant as serviceId for simplicity
+                    serviceId: merchant,
                     metadataURI: txData.metadataURI,
                     status: 'Initiated'
                 });
-                console.log(`[Sync] Success: Transaction ${id.toString()} created in DB with ID: ${savedTx._id}`);
+                console.log(`[Sync] Success: Transaction ${id.toString()} created in DB.`);
             } catch (err) {
                 console.error(`[Sync] Error: Failed to sync TransactionCreated event for ID ${id.toString()}:`, err);
             }
