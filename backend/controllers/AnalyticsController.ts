@@ -28,13 +28,13 @@ export class AnalyticsController {
 
             // 4. User-Specific Stats (Real data from MongoDB synced from chain)
             const agents = await AgentRepo.findByUserId(userId);
-            const totalStakedSum = agents.reduce((sum, agent) => {
+            const totalStakedWei = agents.reduce((sum, agent) => {
                 try {
-                    return sum + Number(agent.stakedMnee || 0) / 1e18; // Simple conversion for display
+                    return sum + BigInt(agent.stakedMnee || "0");
                 } catch {
                     return sum;
                 }
-            }, 0);
+            }, 0n).toString();
 
             // 5. Average Reputation
             const avgReputation = agents.length > 0
@@ -43,7 +43,7 @@ export class AnalyticsController {
 
             const stats = {
                 totalReputation: Math.round(avgReputation),
-                totalStaked: totalStakedSum.toLocaleString(),
+                totalStaked: totalStakedWei,
                 activeDisputes,
                 successRate: Number(successRate),
                 totalTransactions
