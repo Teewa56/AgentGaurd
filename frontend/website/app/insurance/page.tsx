@@ -20,6 +20,7 @@ import {
 import { parseEther, formatEther } from 'viem';
 import { useAgents } from '@/hooks/useAgents';
 import { useReadContract } from 'wagmi';
+import { BaseError, ContractFunctionRevertedError, UserRejectedRequestError } from 'viem';
 
 export default function Insurance() {
     const { address: userAddress } = useAccount();
@@ -27,6 +28,7 @@ export default function Insurance() {
     const [selectedAgent, setSelectedAgent] = useState('');
     const [amount, setAmount] = useState('500');
     const [step, setStep] = useState<'idle' | 'approving' | 'staking'>('idle');
+    const [error, setError] = useState<string | null>(null);
     const [approveHash, setApproveHash] = useState<`0x${string}` | undefined>();
     const [stakeHash, setStakeHash] = useState<`0x${string}` | undefined>();
 
@@ -41,11 +43,25 @@ export default function Insurance() {
         query: { enabled: !!userAddress }
     });
 
-    const { isLoading: isApproving, isSuccess: isApproveSuccess } = useWaitForTransactionReceipt({ hash: approveHash });
-    const { isLoading: isStaking, isSuccess: isStakeSuccess } = useWaitForTransactionReceipt({ hash: stakeHash });
+    const { isLoading: isApproving, isSuccess: isApproveSuccess, error: approveError } = useWaitForTransactionReceipt({ hash: approveHash });
+    const { isLoading: isStaking, isSuccess: isStakeSuccess, error: stakeError } = useWaitForTransactionReceipt({ hash: stakeHash });
+
+    const parseError = (err: any) => {
+        if (err instanceof BaseError) {
+            const revertError = err.walk(e => e instanceof ContractFunctionRevertedError);
+            if (revertError instanceof ContractFunctionRevertedError) {
+                return `Transaction Reverted: ${revertError.reason || 'Contract logic violation'}`;
+            }
+            if (err.walk(e => e instanceof UserRejectedRequestError)) {
+                return 'Transaction rejected by user.';
+            }
+        }
+        return err.shortMessage || err.message || 'An unknown error occurred';
+    };
 
     const handleStake = async () => {
         if (!selectedAgent || !amount) return;
+        setError(null);
         const amountWei = parseEther(amount);
 
         try {
@@ -62,14 +78,16 @@ export default function Insurance() {
             } else {
                 handleActualStake();
             }
-        } catch (error) {
-            console.error("Stake pre-flight failed:", error);
+        } catch (err: any) {
+            console.error("Stake pre-flight failed:", err);
+            setError(parseError(err));
             setStep('idle');
         }
     };
 
     const handleActualStake = async () => {
         setStep('staking');
+        setError(null);
         try {
             const amountWei = parseEther(amount);
             const hash = await writeContractAsync({
@@ -79,8 +97,9 @@ export default function Insurance() {
                 args: [selectedAgent as `0x${string}`, amountWei],
             });
             setStakeHash(hash);
-        } catch (error) {
-            console.error("Actual stake failed:", error);
+        } catch (err: any) {
+            console.error("Actual stake failed:", err);
+            setError(parseError(err));
             setStep('idle');
         }
     }
@@ -92,6 +111,14 @@ export default function Insurance() {
     }, [isApproveSuccess]);
 
     useEffect(() => {
+        if (approveError) {
+            setError(parseError(approveError));
+            setStep('idle');
+            setApproveHash(undefined);
+        }
+    }, [approveError]);
+
+    useEffect(() => {
         if (isStakeSuccess) {
             alert('Stake Successful!');
             setStep('idle');
@@ -100,6 +127,14 @@ export default function Insurance() {
             setApproveHash(undefined);
         }
     }, [isStakeSuccess]);
+
+    useEffect(() => {
+        if (stakeError) {
+            setError(parseError(stakeError));
+            setStep('idle');
+            setStakeHash(undefined);
+        }
+    }, [stakeError]);
 
     return (
         <DashboardLayout>
@@ -115,6 +150,13 @@ export default function Insurance() {
                     {/* TVL and Stats */}
                     <div className="lg:col-span-2 space-y-8">
                         <div className="bg-white border-2 border-primary/20 p-8 rounded-[2rem] shadow-xl relative overflow-hidden group">
+                            {error && (
+                                <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                                    <ShieldAlert className="w-5 h-5 text-red-600" />
+                                    <p className="text-sm font-medium text-red-900">{error}</p>
+                                    <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">×</button>
+                                </div>
+                            )}
                             <div className="relative z-10 space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div className="space-y-2">
