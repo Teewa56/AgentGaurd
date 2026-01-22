@@ -94,7 +94,7 @@ export class BlockchainService {
 
                     await AgentRepo.create({
                         user: dbUser?._id as any,
-                        address: agentAddress,
+                        address: agentAddress.toLowerCase(),
                         charter: "Auto-synced from Bond Event",
                         stakedMnee: amount.toString(),
                         dailySpendingLimit: charter.dailySpendingLimit.toString(),
@@ -111,7 +111,7 @@ export class BlockchainService {
         this.bondContract.on("ReputationUpdated", async (agentAddress: string, newScore: bigint) => {
             console.log(`[Event] Reputation Updated: ${agentAddress} (Score: ${newScore.toString()})`);
             try {
-                await AgentRepo.updateStats(agentAddress, { reputation: Number(newScore) });
+                await AgentRepo.updateStats(agentAddress.toLowerCase(), { reputation: Number(newScore) });
             } catch (err) {
                 console.error("Failed to sync ReputationUpdated event:", err);
             }

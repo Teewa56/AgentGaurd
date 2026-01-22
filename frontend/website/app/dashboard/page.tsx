@@ -12,6 +12,7 @@ import {
 import { motion } from 'framer-motion';
 import { useStats } from '@/hooks/useStats';
 import { useAgents } from '@/hooks/useAgents';
+import { formatEther } from 'viem';
 import { useTransactions } from '@/hooks/useTransactions';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -29,7 +30,7 @@ export default function Dashboard() {
     // Default to 0/empty if data fetch fails or is pending
     const displayStats = [
         { label: 'Total Reputation', value: stats?.totalReputation || 0, icon: Shield, color: 'text-blue-600', trend: 'Global Score' },
-        { label: 'Total Staked', value: `${stats?.totalStaked || 0} MNEE`, icon: TrendingUp, color: 'text-indigo-600', trend: 'Across agents' },
+        { label: 'Total Staked', value: `${stats?.totalStaked ? Number(formatEther(BigInt(stats.totalStaked))).toLocaleString() : 0} MNEE`, icon: TrendingUp, color: 'text-indigo-600', trend: 'Across agents' },
         { label: 'Active Disputes', value: stats?.activeDisputes || 0, icon: AlertTriangle, color: 'text-amber-600', trend: 'Requires attention' },
         { label: 'Success Rate', value: `${stats?.successRate || 100}%`, icon: CheckCircle2, color: 'text-emerald-600', trend: `from ${stats?.totalTransactions || 0} txs` },
     ];
@@ -91,13 +92,13 @@ export default function Dashboard() {
                                     {agents?.slice(0, 5).map((agent, i) => (
                                         <tr key={agent._id} className="hover:bg-secondary/10 transition-colors">
                                             <td className="px-6 py-4 font-semibold text-xs font-mono">{agent.address.substring(0, 8)}...</td>
-                                            <td className="px-6 py-4 text-sm">{agent.dailySpendingLimit} MNEE</td>
+                                            <td className="px-6 py-4 text-sm">{formatEther(BigInt(agent.dailySpendingLimit || '0'))} MNEE</td>
                                             <td className="px-6 py-4 text-sm">
                                                 <div className="flex flex-col gap-1 w-24">
                                                     <div className="w-full bg-secondary rounded-full h-1">
-                                                        <div className={`h-1 rounded-full bg-primary`} style={{ width: `${Math.min((agent.usage?.monthly / agent.monthlySpendingLimit) * 100, 100)}%` }}></div>
+                                                        <div className={`h-1 rounded-full bg-primary`} style={{ width: `${Math.min((Number(formatEther(BigInt(agent.usage?.monthly || '0'))) / Number(formatEther(BigInt(agent.monthlySpendingLimit || '1')))) * 100, 100)}%` }}></div>
                                                     </div>
-                                                    <span className="text-[10px] text-muted-foreground">{agent.usage?.monthly} / {agent.monthlySpendingLimit}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{formatEther(BigInt(agent.usage?.monthly || '0'))} / {formatEther(BigInt(agent.monthlySpendingLimit || '0'))}</span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
@@ -138,7 +139,7 @@ export default function Dashboard() {
                                     <div>
                                         <h4 className="text-sm font-bold">{activity.status} Transaction</h4>
                                         <p className="text-xs text-muted-foreground mt-0.5">
-                                            {activity.agent.substring(0, 6)}... paid {activity.value} {getTokenSymbol(activity.token)} to {activity.to}
+                                            {activity.agent.substring(0, 6)}... paid {activity.value} {getTokenSymbol(activity.token)} to {activity.to.substring(0, 8)}...
                                         </p>
                                         <span className="text-[10px] font-medium text-muted-foreground uppercase mt-1 block tracking-wider">
                                             {new Date(activity.timestamp).toLocaleTimeString()}

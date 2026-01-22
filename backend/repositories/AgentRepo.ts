@@ -2,6 +2,7 @@ import Agent, { IAgent } from '../models/Agent';
 
 export class AgentRepo {
     static async create(data: Partial<IAgent>): Promise<IAgent | null> {
+        if (data.address) data.address = data.address.toLowerCase();
         return await Agent.findOneAndUpdate(
             { address: data.address },
             data,
@@ -10,7 +11,7 @@ export class AgentRepo {
     }
 
     static async findByAddress(address: string): Promise<IAgent | null> {
-        return await Agent.findOne({ address });
+        return await Agent.findOne({ address: address.toLowerCase() });
     }
 
     static async findByUserId(userId: string): Promise<IAgent[]> {
