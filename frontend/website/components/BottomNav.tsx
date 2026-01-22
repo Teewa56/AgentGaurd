@@ -40,13 +40,13 @@ export function BottomNav() {
                             isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
-                        {isActive && (
-                            <div className="absolute -top-1 w-8 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
-                        )}
                         <item.icon className={cn("w-5 h-5 transition-transform", isActive && "scale-110")} />
                         <span className={cn("text-[9px] font-bold uppercase tracking-tight", isActive ? "opacity-100" : "opacity-60")}>
                             {item.label}
                         </span>
+                        {isActive && (
+                            <div className="absolute -bottom-1 w-8 h-1 bg-primary rounded-full shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                        )}
                     </Link>
                 );
             })}
