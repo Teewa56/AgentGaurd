@@ -33,11 +33,16 @@ export class TransactionController {
             const user = await User.findById(userId);
             const userAddress = user?.walletAddress;
 
-            const transactions = await TxRepo.findAll({
-                agentAddress: agent as string,
+            const query: any = {
                 status: statusFilter,
-                userAddress: userAddress
-            });
+                $or: [
+                    { userAddress: userAddress },
+                    { agentAddress: userAddress }
+                ]
+            };
+            if (agent) query.agentAddress = agent as string;
+
+            const transactions = await TxRepo.findAll(query);
 
             // Map to frontend interface
             const mappedTransactions = transactions.map(tx => {

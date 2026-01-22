@@ -11,6 +11,7 @@ import authRoutes from './routes/authRoutes';
 import analyticsRoutes from './routes/analyticsRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import paymentRoutes from './routes/paymentRoutes';
+import ipfsRoutes from './routes/ipfsRoutes';
 import { errorHandler } from './middleware/errorHandler';
 import { SECURITY_CONFIG } from './config/security';
 
@@ -45,6 +46,7 @@ app.use('/api/disputes', disputeRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/ipfs', ipfsRoutes);
 
 // Error Handler
 app.use(errorHandler);

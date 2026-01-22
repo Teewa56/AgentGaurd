@@ -1,5 +1,5 @@
 'use client';
-//on this page, we are to upload the metadata to IPFS before we then uplaod the URL of the data to the smart contract
+
 import { DashboardLayout } from '@/components/DashboardLayout';
 import {
     Send,
@@ -10,9 +10,12 @@ import {
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
+import api from '@/lib/api';
 import {
     ESCROW_PAYMENT_ADDRESS,
     ESCROW_PAYMENT_ABI,
+    REPUTATION_BOND_ADDRESS,
+    REPUTATION_BOND_ABI,
     MNEE_TOKEN_ADDRESS,
     USDC_TOKEN_ADDRESS,
     USDT_TOKEN_ADDRESS,
@@ -29,6 +32,7 @@ export default function Simulate() {
     const [amount, setAmount] = useState('10');
     const [metadata, setMetadata] = useState('{"item": "AI GPU Credits", "service": "HyperCompute"}');
     const [selectedTokenAddr, setSelectedTokenAddr] = useState(MNEE_TOKEN_ADDRESS);
+    const [isUploading, setIsUploading] = useState(false);
 
     const TOKENS = [
         { name: 'MNEE', address: MNEE_TOKEN_ADDRESS, decimals: 18 },
@@ -46,6 +50,14 @@ export default function Simulate() {
         args: currentWallet ? [currentWallet as `0x${string}`, ESCROW_PAYMENT_ADDRESS as `0x${string}`] : undefined,
     });
 
+    // Check Staking Status (Bond)
+    const { data: hasSufficientBond, refetch: refetchBond } = useReadContract({
+        address: REPUTATION_BOND_ADDRESS as `0x${string}`,
+        abi: REPUTATION_BOND_ABI,
+        functionName: 'hasSufficientBond',
+        args: currentWallet ? [currentWallet as `0x${string}`] : undefined,
+    });
+
     const { writeContract, data: hash, error: writeError, isPending: isTxPending } = useWriteContract();
     const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ hash });
 
@@ -56,8 +68,8 @@ export default function Simulate() {
 
     useEffect(() => {
         if (isSuccess) {
-            // alert("Transaction Completed / Confirmed!");
             refetchAllowance();
+            refetchBond();
         }
     }, [isSuccess]);
 
@@ -80,6 +92,11 @@ export default function Simulate() {
                 return;
             }
 
+            if (!hasSufficientBond) {
+                setUiError("Insufficient reputation bond. Please stake MNEE in the Bond section before making transactions.");
+                return;
+            }
+
             // Basic Validation
             if (!merchant.startsWith('0x') || merchant.length !== 42) {
                 setUiError("Invalid Merchant Address format.");
@@ -91,8 +108,9 @@ export default function Simulate() {
                 return;
             }
 
+            let metadataJSON;
             try {
-                JSON.parse(metadata);
+                metadataJSON = JSON.parse(metadata);
             } catch (e) {
                 setUiError("Invalid Metadata JSON format.");
                 return;
@@ -111,6 +129,20 @@ export default function Simulate() {
                 return;
             }
 
+            // 1. Upload metadata to IPFS via backend relay
+            setIsUploading(true);
+            let metadataURI;
+            try {
+                const response = await api.post('/ipfs/upload', { metadata: metadataJSON });
+                metadataURI = response.data.cid;
+            } catch (err: any) {
+                setUiError("Failed to upload metadata to IPFS: " + (err.response?.data?.error || err.message));
+                return;
+            } finally {
+                setIsUploading(false);
+            }
+
+            // 2. Initiate transaction on-chain
             writeContract({
                 address: ESCROW_PAYMENT_ADDRESS as `0x${string}`,
                 abi: ESCROW_PAYMENT_ABI,
@@ -119,7 +151,7 @@ export default function Simulate() {
                     merchant as `0x${string}`,
                     selectedTokenAddr as `0x${string}`,
                     parseUnits(amount, currentToken.decimals),
-                    metadata
+                    metadataURI
                 ],
             });
         } catch (error: any) {
@@ -222,10 +254,15 @@ export default function Simulate() {
 
                         <button
                             onClick={handleSimulate}
-                            disabled={!isRegisteredAgent || isTxPending || isConfirming}
+                            disabled={!isRegisteredAgent || isTxPending || isConfirming || isUploading}
                             className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
                         >
-                            {isTxPending ? (
+                            {isUploading ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
+                                    Uploading to IPFS...
+                                </>
+                            ) : isTxPending ? (
                                 <>
                                     <div className="animate-spin rounded-full h-4 w-4 border-2 border-white/20 border-t-white" />
                                     Signing Transaction...

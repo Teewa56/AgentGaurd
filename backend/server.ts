@@ -15,8 +15,7 @@ async function startServer() {
     try {
         // 1. Database Connection
         await connectDB();
-        console.log(" MongoDB Connected Successfully");
-
+        
         // 2. Redis Connection 
         try {
             await connectRedis();
