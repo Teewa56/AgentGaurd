@@ -34,7 +34,18 @@ export default function Simulate() {
     const [amount, setAmount] = useState('10');
     const [metadata, setMetadata] = useState('{"item": "AI GPU Credits", "service": "HyperCompute"}');
     const [selectedTokenAddr, setSelectedTokenAddr] = useState(MNEE_TOKEN_ADDRESS);
+    const [targetAgent, setTargetAgent] = useState<string>('');
     const [isUploading, setIsUploading] = useState(false);
+
+    // Sync target agent based on connection or owner's agents
+    useEffect(() => {
+        const currentIsAgent = agents?.some(a => a.address.toLowerCase() === currentWallet?.toLowerCase());
+        if (currentWallet && currentIsAgent) {
+            setTargetAgent(currentWallet);
+        } else if (agents && agents.length > 0 && !targetAgent) {
+            setTargetAgent(agents[0].address);
+        }
+    }, [currentWallet, agents, targetAgent]);
 
     const TOKENS = [
         { name: 'MNEE', address: MNEE_TOKEN_ADDRESS, decimals: 18 },
@@ -44,15 +55,15 @@ export default function Simulate() {
 
     const currentToken = TOKENS.find(t => t.address === selectedTokenAddr) || TOKENS[0];
 
-    // 1. Find who owns this agent
+    // 1. Find who owns THIS target agent
     const { data: agentOwner } = useReadContract({
         address: AGENT_REGISTRY_ADDRESS as `0x${string}`,
         abi: AGENT_REGISTRY_ABI,
         functionName: 'agentToUser',
-        args: currentWallet ? [currentWallet as `0x${string}`] : undefined,
+        args: targetAgent ? [targetAgent as `0x${string}`] : undefined,
     });
 
-    // 2. Check Owner's Allowance (Protocol pulls from Owner, not Agent)
+    // 2. Check Owner's Allowance
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         address: selectedTokenAddr as `0x${string}`,
         abi: ERC20_ABI,
@@ -60,19 +71,18 @@ export default function Simulate() {
         args: agentOwner ? [agentOwner as `0x${string}`, ESCROW_PAYMENT_ADDRESS as `0x${string}`] : undefined,
     });
 
-    // 3. Check Staking Status (Bond)
+    // 3. Check Staking Status
     const { data: hasSufficientBond, refetch: refetchBond } = useReadContract({
         address: REPUTATION_BOND_ADDRESS as `0x${string}`,
         abi: REPUTATION_BOND_ABI,
         functionName: 'hasSufficientBond',
-        args: currentWallet ? [currentWallet as `0x${string}`] : undefined,
+        args: targetAgent ? [targetAgent as `0x${string}`] : undefined,
     });
 
     const { writeContract, data: hash, error: writeError, isPending: isTxPending } = useWriteContract();
     const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ hash });
 
-    // Find if the current wallet is an agent or the owner
-    const isRegisteredAgent = agents?.some(a => a.address.toLowerCase() === currentWallet?.toLowerCase());
+    const isRegisteredAgent = currentWallet?.toLowerCase() === targetAgent?.toLowerCase();
     const isOwner = currentWallet?.toLowerCase() === (agentOwner as string)?.toLowerCase();
 
     const [uiError, setUiError] = useState<string | null>(null);
@@ -117,13 +127,23 @@ export default function Simulate() {
         try {
             setUiError(null);
 
+            // Role Contextual Logic
+            if (needsApproval) {
+                if (isOwner) {
+                    handleApprove();
+                } else {
+                    setUiError(`Owner Wallet (${(agentOwner as string)?.slice(0, 10)}...) must grant allowance. Please switch wallets.`);
+                }
+                return;
+            }
+
             if (!isRegisteredAgent) {
-                setUiError("You must be connected with an Agent's Wallet to initiate a transaction.");
+                setUiError(`Must be connected as Agent (${targetAgent?.slice(0, 10)}...) to simulate.`);
                 return;
             }
 
             if (!hasSufficientBond && selectedTokenAddr === MNEE_TOKEN_ADDRESS) {
-                setUiError("Insufficient reputation bond. Please stake MNEE in the Bond section before making transactions.");
+                setUiError("Insufficient reputation bond for this agent.");
                 return;
             }
 
@@ -143,15 +163,6 @@ export default function Simulate() {
                 metadataJSON = JSON.parse(metadata);
             } catch (e) {
                 setUiError("Invalid Metadata JSON format.");
-                return;
-            }
-
-            if (needsApproval) {
-                if (isOwner) {
-                    handleApprove();
-                } else {
-                    setUiError(`Owner Wallet (${(agentOwner as string)?.slice(0, 10)}...) must grant allowance. Please switch wallets.`);
-                }
                 return;
             }
 
@@ -196,28 +207,28 @@ export default function Simulate() {
                     </p>
                 </div>
 
-                {!isRegisteredAgent && (
+                {!isRegisteredAgent && !needsApproval && (
                     <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex gap-4">
                         <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
                         <div>
-                            <h4 className="font-bold text-amber-900">Agent Identity Required</h4>
+                            <h4 className="font-bold text-amber-900">Agent Wallet Required</h4>
                             <p className="text-sm text-amber-800 mt-1">
-                                Your current wallet ({currentWallet?.slice(0, 10)}...) is not registered as an Agent.
-                                Switch to a wallet you registered in the "Registry" tab to simulate a transaction.
+                                You are connected as a different wallet. To simulate a transaction from <span className="font-mono font-bold">{targetAgent?.slice(0, 10)}...</span>, please switch to its wallet.
                             </p>
                         </div>
                     </div>
                 )}
 
-                {isRegisteredAgent && needsApproval && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex gap-4 animate-pulse">
+                {needsApproval && (
+                    <div className={`bg-blue-50 border border-blue-200 rounded-2xl p-6 flex gap-4 ${isOwner ? 'animate-pulse ring-2 ring-blue-500/20' : ''}`}>
                         <ShieldCheck className="w-6 h-6 text-blue-600 shrink-0" />
                         <div>
                             <h4 className="font-bold text-blue-900">Owner Authorization Required</h4>
                             <p className="text-sm text-blue-800 mt-1">
-                                The protocol pulls funds from the Agent's Owner wallet: <span className="font-mono font-bold">{agentOwner as string}</span>.
-                                <br />
-                                <strong>Action Needed:</strong> Switch to that wallet and grant {currentToken.name} allowance to the Escrow contract.
+                                {isOwner
+                                    ? `You are the Owner! Click "Grant Approval" below to authorize ${currentToken.name} spending for this agent.`
+                                    : `The protocol pulls funds from the Owner's wallet: ${agentOwner as string}. Please switch to that wallet to grant allowance.`
+                                }
                             </p>
                         </div>
                     </div>
@@ -229,6 +240,24 @@ export default function Simulate() {
                     </div>
 
                     <div className="space-y-6 relative z-10">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Acting Agent</label>
+                            <select
+                                value={targetAgent}
+                                onChange={(e) => setTargetAgent(e.target.value)}
+                                className="w-full bg-secondary/30 border rounded-2xl py-3 px-4 text-sm font-mono focus:ring-2 focus:ring-primary/20 outline-none"
+                            >
+                                {agents?.map(a => (
+                                    <option key={a.address} value={a.address}>
+                                        {a.name} ({a.address.slice(0, 10)}...)
+                                    </option>
+                                ))}
+                                {!agents?.some(a => a.address.toLowerCase() === targetAgent.toLowerCase()) && targetAgent && (
+                                    <option value={targetAgent}>{targetAgent.slice(0, 10)}... (Connected)</option>
+                                )}
+                            </select>
+                        </div>
+
                         <div className="space-y-2">
                             <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Merchant/Service Address</label>
                             <div className="relative">

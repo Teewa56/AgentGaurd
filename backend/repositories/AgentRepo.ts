@@ -27,7 +27,8 @@ export class AgentRepo {
     }
 
     static async getLatestUpdate(): Promise<Date | null> {
-        const latest = await Agent.findOne().sort({ updatedAt: -1 }).select('updatedAt');
-        return latest ? latest.updatedAt : null;
+        const latest = await Agent.findOne().sort({ updatedAt: -1, createdAt: -1 }).select('updatedAt createdAt');
+        if (!latest) return null;
+        return latest.updatedAt || latest.createdAt || null;
     }
 }
