@@ -71,6 +71,11 @@ export class BlockchainService {
 
                 await AgentRepo.create(agentData);
                 console.log(`[Sync] Success: Agent ${agentAddress} synced to DB. ${dbUser ? 'Linked to user: ' + dbUser.email : 'Unlinked.'}`);
+
+                // Invalidate cache
+                if (dbUser?._id) {
+                    await CacheService.del(`dashboard_stats_v3_${dbUser._id}`);
+                }
             } catch (err) {
                 console.error(`[Sync] Error: Failed to sync AgentRegistered event for ${agentAddress}:`, err);
             }
@@ -86,6 +91,12 @@ export class BlockchainService {
                     const newTotal = (BigInt(agent.stakedMnee || "0") + amount).toString();
                     await AgentRepo.updateStats(normalizedAddress, { stakedMnee: newTotal });
                     console.log(`[Sync] Success: Bond updated for ${normalizedAddress}. New Total: ${ethers.formatEther(newTotal)} MNEE`);
+
+                    // Invalidate dashboard cache
+                    const agent = await AgentRepo.findByAddress(normalizedAddress);
+                    if (agent && agent.user) {
+                        await CacheService.del(`dashboard_stats_v3_${agent.user}`);
+                    }
                 } else {
                     console.warn(`[Sync] Warning: Received BondStaked for unknown agent ${agentAddress}. Syncing agent first...`);
                     // This can happen if BondStaked arrives before AgentRegistered
@@ -142,6 +153,12 @@ export class BlockchainService {
                     status: 'Initiated'
                 });
                 console.log(`[Sync] Success: Transaction ${id.toString()} created in DB.`);
+
+                // Invalidate Cache for the user who owns the agent
+                const agentInDb = await AgentRepo.findByAddress(agent);
+                if (agentInDb && agentInDb.user) {
+                    await CacheService.del(`dashboard_stats_v3_${agentInDb.user}`);
+                }
             } catch (err) {
                 console.error(`[Sync] Error: Failed to sync TransactionCreated event for ID ${id.toString()}:`, err);
             }
@@ -155,6 +172,12 @@ export class BlockchainService {
                 if (tx) {
                     tx.status = status;
                     await tx.save();
+
+                    // Invalidate Cache
+                    const agentInDb = await AgentRepo.findByAddress(tx.agentAddress);
+                    if (agentInDb && agentInDb.user) {
+                        await CacheService.del(`dashboard_stats_v3_${agentInDb.user}`);
+                    }
                 }
             } catch (err) {
                 console.error("Failed to sync TransactionSettled event:", err);

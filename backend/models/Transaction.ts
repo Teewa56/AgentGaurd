@@ -10,6 +10,7 @@ export interface ITransaction extends Document {
     metadataURI: string;
     status: 'Initiated' | 'Completed' | 'Disputed' | 'Refunded';
     createdAt: Date;
+    updatedAt: Date;
 }
 
 const TransactionSchema: Schema = new Schema({
@@ -22,6 +23,6 @@ const TransactionSchema: Schema = new Schema({
     metadataURI: { type: String, required: true },
     status: { type: String, enum: ['Initiated', 'Completed', 'Disputed', 'Refunded'], default: 'Initiated' },
     createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 export default mongoose.model<ITransaction>('Transaction', TransactionSchema);

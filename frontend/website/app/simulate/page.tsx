@@ -71,8 +71,9 @@ export default function Simulate() {
     const { writeContract, data: hash, error: writeError, isPending: isTxPending } = useWriteContract();
     const { isLoading: isConfirming, isSuccess, error: confirmError } = useWaitForTransactionReceipt({ hash });
 
-    // Find if the current wallet is an agent
+    // Find if the current wallet is an agent or the owner
     const isRegisteredAgent = agents?.some(a => a.address.toLowerCase() === currentWallet?.toLowerCase());
+    const isOwner = currentWallet?.toLowerCase() === (agentOwner as string)?.toLowerCase();
 
     const [uiError, setUiError] = useState<string | null>(null);
 
@@ -93,6 +94,25 @@ export default function Simulate() {
 
     const needsApproval = allowance !== undefined && amount ? (parseFloat(amount) > 0 && (allowance as bigint) < parseUnits(amount, currentToken.decimals)) : false;
 
+    const handleApprove = () => {
+        try {
+            setUiError(null);
+            if (!isOwner) {
+                setUiError("Only the Owner wallet can grant token allowance.");
+                return;
+            }
+
+            writeContract({
+                address: selectedTokenAddr as `0x${string}`,
+                abi: ERC20_ABI,
+                functionName: 'approve',
+                args: [ESCROW_PAYMENT_ADDRESS as `0x${string}`, parseUnits(amount || "1000000", currentToken.decimals)],
+            });
+        } catch (error: any) {
+            setUiError(error.message || "Failed to approve token.");
+        }
+    };
+
     const handleSimulate = async () => {
         try {
             setUiError(null);
@@ -102,7 +122,7 @@ export default function Simulate() {
                 return;
             }
 
-            if (!hasSufficientBond) {
+            if (!hasSufficientBond && selectedTokenAddr === MNEE_TOKEN_ADDRESS) {
                 setUiError("Insufficient reputation bond. Please stake MNEE in the Bond section before making transactions.");
                 return;
             }
@@ -127,7 +147,11 @@ export default function Simulate() {
             }
 
             if (needsApproval) {
-                setUiError(`Owner Wallet (${(agentOwner as string)?.slice(0, 10)}...) must grant ${currentToken.name} allowance to the Escrow contract. Please switch to the owner wallet to approve.`);
+                if (isOwner) {
+                    handleApprove();
+                } else {
+                    setUiError(`Owner Wallet (${(agentOwner as string)?.slice(0, 10)}...) must grant allowance. Please switch wallets.`);
+                }
                 return;
             }
 
@@ -270,8 +294,11 @@ export default function Simulate() {
 
                         <button
                             onClick={handleSimulate}
-                            disabled={!isRegisteredAgent || isTxPending || isConfirming || isUploading}
-                            className="w-full py-4 bg-primary text-white font-bold rounded-2xl shadow-lg shadow-primary/20 hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-3 disabled:opacity-50"
+                            disabled={(needsApproval ? !isOwner : !isRegisteredAgent) || isTxPending || isConfirming || isUploading}
+                            className={`w-full py-4 font-bold rounded-2xl shadow-lg transition-all flex items-center justify-center gap-3 disabled:opacity-50 ${needsApproval
+                                ? 'bg-blue-600 text-white shadow-blue-500/20 hover:bg-blue-700'
+                                : 'bg-primary text-white shadow-primary/20 hover:scale-[1.01] active:scale-[0.98]'
+                                }`}
                         >
                             {isUploading ? (
                                 <>
@@ -290,11 +317,15 @@ export default function Simulate() {
                                 </>
                             ) : isSuccess ? (
                                 <>
-                                    <ShieldCheck className="w-5 h-5" /> Transaction Success!
+                                    <ShieldCheck className="w-5 h-5" /> Success!
                                 </>
                             ) : (
                                 <>
-                                    {needsApproval ? `Approve ${currentToken.name}` : 'Simulate Agent Purchase'} <ArrowRight className="w-5 h-5" />
+                                    {needsApproval
+                                        ? (isOwner ? `Grant ${currentToken.name} Approval` : 'Switch to Owner to Approve')
+                                        : (isRegisteredAgent ? 'Simulate Agent Purchase' : 'Switch to Agent Wallet')
+                                    }
+                                    <ArrowRight className="w-5 h-5" />
                                 </>
                             )}
                         </button>

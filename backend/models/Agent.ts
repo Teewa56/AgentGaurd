@@ -13,6 +13,7 @@ export interface IAgent extends Document {
     stakedMnee: string;
     reputation: number;
     createdAt: Date;
+    updatedAt: Date;
 }
 
 const AgentSchema: Schema = new Schema({
@@ -28,6 +29,6 @@ const AgentSchema: Schema = new Schema({
     stakedMnee: { type: String, default: '0' },
     reputation: { type: Number, default: 500 },
     createdAt: { type: Date, default: Date.now }
-});
+}, { timestamps: true });
 
 export default mongoose.model<IAgent>('Agent', AgentSchema);

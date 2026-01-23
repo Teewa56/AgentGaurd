@@ -8,9 +8,21 @@ export class AnalyticsController {
     static async getDashboardStats(req: Request, res: Response, next: NextFunction) {
         try {
             const userId = (req as any).user?.id;
-            const cacheKey = `dashboard_stats_v2_${userId}`;
+            const cacheKey = `dashboard_stats_v3_${userId}`; // v3 for smart cache
             const cached = await CacheService.get(cacheKey);
-            if (cached) {
+
+            // Fetch the most recent change in the DB to check if cache is stale
+            const [lastAgentUpdate, lastTxUpdate] = await Promise.all([
+                AgentRepo.getLatestUpdate(),
+                TxRepo.getLatestUpdate()
+            ]);
+
+            const lastUpdate = Math.max(
+                lastAgentUpdate?.getTime() || 0,
+                lastTxUpdate?.getTime() || 0
+            );
+
+            if (cached && cached.timestamp >= lastUpdate) {
                 return res.json(cached);
             }
 
@@ -47,10 +59,11 @@ export class AnalyticsController {
                 totalStaked: totalStakedWei,
                 activeDisputes,
                 successRate: Number(successRate),
-                totalTransactions
+                totalTransactions,
+                timestamp: Date.now() // Record when this was calculated
             };
 
-            await CacheService.set(cacheKey, stats, 60 * 60); // Cache for 1 hour
+            await CacheService.set(cacheKey, stats, 30 * 60); // Cache for 30 minutes
 
             res.json(stats);
 

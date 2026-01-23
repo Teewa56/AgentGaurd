@@ -25,4 +25,9 @@ export class TxRepo {
     static async findAll(filters: any = {}): Promise<ITransaction[]> {
         return await Transaction.find(filters).sort({ createdAt: -1 });
     }
+
+    static async getLatestUpdate(): Promise<Date | null> {
+        const latest = await Transaction.findOne().sort({ updatedAt: -1 }).select('updatedAt');
+        return latest ? latest.updatedAt : null;
+    }
 }

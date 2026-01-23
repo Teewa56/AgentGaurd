@@ -25,4 +25,9 @@ export class AgentRepo {
     static async findAll(): Promise<IAgent[]> {
         return await Agent.find();
     }
+
+    static async getLatestUpdate(): Promise<Date | null> {
+        const latest = await Agent.findOne().sort({ updatedAt: -1 }).select('updatedAt');
+        return latest ? latest.updatedAt : null;
+    }
 }
