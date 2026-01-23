@@ -12,6 +12,8 @@ import { useState, useEffect } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import api from '@/lib/api';
 import {
+    AGENT_REGISTRY_ADDRESS,
+    AGENT_REGISTRY_ABI,
     ESCROW_PAYMENT_ADDRESS,
     ESCROW_PAYMENT_ABI,
     REPUTATION_BOND_ADDRESS,
@@ -42,15 +44,23 @@ export default function Simulate() {
 
     const currentToken = TOKENS.find(t => t.address === selectedTokenAddr) || TOKENS[0];
 
-    // Check Allowance
+    // 1. Find who owns this agent
+    const { data: agentOwner } = useReadContract({
+        address: AGENT_REGISTRY_ADDRESS as `0x${string}`,
+        abi: AGENT_REGISTRY_ABI,
+        functionName: 'agentToUser',
+        args: currentWallet ? [currentWallet as `0x${string}`] : undefined,
+    });
+
+    // 2. Check Owner's Allowance (Protocol pulls from Owner, not Agent)
     const { data: allowance, refetch: refetchAllowance } = useReadContract({
         address: selectedTokenAddr as `0x${string}`,
         abi: ERC20_ABI,
         functionName: 'allowance',
-        args: currentWallet ? [currentWallet as `0x${string}`, ESCROW_PAYMENT_ADDRESS as `0x${string}`] : undefined,
+        args: agentOwner ? [agentOwner as `0x${string}`, ESCROW_PAYMENT_ADDRESS as `0x${string}`] : undefined,
     });
 
-    // Check Staking Status (Bond)
+    // 3. Check Staking Status (Bond)
     const { data: hasSufficientBond, refetch: refetchBond } = useReadContract({
         address: REPUTATION_BOND_ADDRESS as `0x${string}`,
         abi: REPUTATION_BOND_ABI,
@@ -117,15 +127,7 @@ export default function Simulate() {
             }
 
             if (needsApproval) {
-                writeContract({
-                    address: selectedTokenAddr as `0x${string}`,
-                    abi: ERC20_ABI,
-                    functionName: 'approve',
-                    args: [
-                        ESCROW_PAYMENT_ADDRESS as `0x${string}`,
-                        parseUnits(amount, currentToken.decimals)
-                    ],
-                });
+                setUiError(`Owner Wallet (${(agentOwner as string)?.slice(0, 10)}...) must grant ${currentToken.name} allowance to the Escrow contract. Please switch to the owner wallet to approve.`);
                 return;
             }
 
@@ -178,6 +180,20 @@ export default function Simulate() {
                             <p className="text-sm text-amber-800 mt-1">
                                 Your current wallet ({currentWallet?.slice(0, 10)}...) is not registered as an Agent.
                                 Switch to a wallet you registered in the "Registry" tab to simulate a transaction.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {isRegisteredAgent && needsApproval && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-2xl p-6 flex gap-4 animate-pulse">
+                        <ShieldCheck className="w-6 h-6 text-blue-600 shrink-0" />
+                        <div>
+                            <h4 className="font-bold text-blue-900">Owner Authorization Required</h4>
+                            <p className="text-sm text-blue-800 mt-1">
+                                The protocol pulls funds from the Agent's Owner wallet: <span className="font-mono font-bold">{agentOwner as string}</span>.
+                                <br />
+                                <strong>Action Needed:</strong> Switch to that wallet and grant {currentToken.name} allowance to the Escrow contract.
                             </p>
                         </div>
                     </div>
