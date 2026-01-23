@@ -8,6 +8,7 @@ export interface ITransaction extends Document {
     tokenAddress: string; // Token used for payment
     serviceId: string;
     metadataURI: string;
+    onchainHash?: string;
     status: 'Initiated' | 'Completed' | 'Disputed' | 'Refunded';
     createdAt: Date;
     updatedAt: Date;
@@ -21,6 +22,7 @@ const TransactionSchema: Schema = new Schema({
     tokenAddress: { type: String, required: true },
     serviceId: { type: String, required: true },
     metadataURI: { type: String, required: true },
+    onchainHash: { type: String },
     status: { type: String, enum: ['Initiated', 'Completed', 'Disputed', 'Refunded'], default: 'Initiated' },
     createdAt: { type: Date, default: Date.now }
 }, { timestamps: true });

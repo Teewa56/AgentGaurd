@@ -31,16 +31,17 @@ export class TransactionController {
             if (statusFilter === 'Escrowed') statusFilter = 'Initiated';
 
             const user = await User.findById(userId);
-            const userAddress = user?.walletAddress;
+            const userAddress = user?.walletAddress?.toLowerCase();
 
             const query: any = {
-                status: statusFilter,
                 $or: [
                     { userAddress: userAddress },
                     { agentAddress: userAddress }
                 ]
             };
-            if (agent) query.agentAddress = agent as string;
+
+            if (statusFilter) query.status = statusFilter;
+            if (agent) query.agentAddress = (agent as string).toLowerCase();
 
             const transactions = await TxRepo.findAll(query);
 
@@ -49,7 +50,7 @@ export class TransactionController {
                 const decimals = getTokenDecimals(tx.tokenAddress);
                 return {
                     _id: tx._id,
-                    hash: `0x${tx.txId.toString(16).padStart(64, '0')}`, // Mock hash from txId
+                    hash: tx.onchainHash || `0x${tx.txId.toString(16).padStart(64, '0')}`, // Prefer real hash
                     txId: tx.txId,
                     agent: tx.agentAddress,
                     to: tx.serviceId,

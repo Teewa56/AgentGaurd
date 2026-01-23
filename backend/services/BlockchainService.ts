@@ -7,6 +7,7 @@ import { TxRepo } from '../repositories/TxRepo';
 import { IPFSService } from './IPFSservice';
 import { CONTRACTS } from '../config/contracts';
 import User from '../models/User';
+import { CacheService } from './CacheService';
 
 dotenv.config();
 
@@ -93,7 +94,6 @@ export class BlockchainService {
                     console.log(`[Sync] Success: Bond updated for ${normalizedAddress}. New Total: ${ethers.formatEther(newTotal)} MNEE`);
 
                     // Invalidate dashboard cache
-                    const agent = await AgentRepo.findByAddress(normalizedAddress);
                     if (agent && agent.user) {
                         await CacheService.del(`dashboard_stats_v3_${agent.user}`);
                     }
@@ -130,9 +130,10 @@ export class BlockchainService {
         });
 
         // 3. Transaction Lifecycle Listeners
-        this.escrowContract.on("TransactionCreated", async (id: bigint, agent: string, merchant: string, token: string, amount: bigint) => {
+        this.escrowContract.on("TransactionCreated", async (id: bigint, agent: string, merchant: string, token: string, amount: bigint, event: any) => {
             const decimals = token.toLowerCase() === process.env.MNEE_TOKEN_ADDRESS?.toLowerCase() ? 18 : 6;
-            console.log(`[Event] Transaction Created: ID ${id.toString()}, Agent ${agent}, Token ${token}, Amount ${ethers.formatUnits(amount, decimals)}`);
+            const txHash = event.log ? event.log.transactionHash : (event.transactionHash || '');
+            console.log(`[Event] Transaction Created: ID ${id.toString()}, Agent ${agent}, Token ${token}, Amount ${ethers.formatUnits(amount, decimals)}, Hash ${txHash}`);
 
             // Add delay to mitigate race conditions with chain state
             await new Promise(resolve => setTimeout(resolve, 2000));
@@ -150,6 +151,7 @@ export class BlockchainService {
                     amount: amount.toString(),
                     serviceId: merchant.toLowerCase(),
                     metadataURI: txData.metadataURI,
+                    onchainHash: txHash,
                     status: 'Initiated'
                 });
                 console.log(`[Sync] Success: Transaction ${id.toString()} created in DB.`);
@@ -164,13 +166,18 @@ export class BlockchainService {
             }
         });
 
-        this.escrowContract.on("TransactionSettled", async (id: bigint, completed: boolean) => {
-            console.log(`[Event] Transaction Settled: ID ${id.toString()} (Success: ${completed})`);
+        this.escrowContract.on("TransactionSettled", async (id: bigint, completed: boolean, event: any) => {
+            const txHash = event.log ? event.log.transactionHash : (event.transactionHash || '');
+            console.log(`[Event] Transaction Settled: ID ${id.toString()} (Success: ${completed}), Hash ${txHash}`);
             try {
                 const status = completed ? 'Completed' : 'Refunded';
                 const tx = await TxRepo.findByTxId(Number(id));
                 if (tx) {
                     tx.status = status;
+                    // Update onchainHash if it was missing
+                    if (!tx.onchainHash && txHash) {
+                        tx.onchainHash = txHash;
+                    }
                     await tx.save();
 
                     // Invalidate Cache
