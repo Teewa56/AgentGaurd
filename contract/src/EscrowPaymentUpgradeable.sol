@@ -5,6 +5,7 @@ import "../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/IERC20Met
 import "../lib/openzeppelin-contracts-upgradeable/contracts/access/OwnableUpgradeable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/Initializable.sol";
 import "../lib/openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import "../lib/foundry-chainlink-toolkit/lib/chainlink-brownie-contracts/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 import "./AgentRegistry.sol";
 import "./ReputationBond.sol";
 
@@ -13,11 +14,13 @@ import "./ReputationBond.sol";
  * @dev Upgradeable version of EscrowPayment with API payment support
  * @notice Manages payment locking, escrow periods, and transaction metadata
  *         Supports both standard transactions and API payments
+ *         Compatible with Chainlink Automation for automatic settlements
  */
 contract EscrowPaymentUpgradeable is
     Initializable,
     OwnableUpgradeable,
-    UUPSUpgradeable
+    UUPSUpgradeable,
+    AutomationCompatibleInterface
 {
     mapping(address => bool) public supportedTokens;
     AgentRegistry public REGISTRY;
@@ -31,6 +34,10 @@ contract EscrowPaymentUpgradeable is
     // Configurable state variables
     uint256 public serviceFeeBps; // 0.5% default (50 basis points)
     int256 public reputationRewardSuccess;
+    
+    // Chainlink Automation state
+    uint256 public lastAutomationCheck;
+    uint256 public maxBatchSize = 20; // Max transactions per automation call
 
     enum TransactionType {
         STANDARD, // Regular goods/services
@@ -516,5 +523,120 @@ contract EscrowPaymentUpgradeable is
         } catch {
             return amount; // Default to 18 if unknown
         }
+    }
+
+    // ========================================
+    // CHAINLINK AUTOMATION FUNCTIONS
+    // ========================================
+
+    /**
+     * @dev Chainlink Automation: check if there are transactions ready for settlement
+     * Returns true if there are eligible transactions to be settled
+     */
+    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        uint256[] memory settleableTxs = _getSettleableTransactions(lastAutomationCheck, nextTransactionId - 1);
+        
+        if (settleableTxs.length > 0) {
+            upkeepNeeded = true;
+            performData = abi.encode(settleableTxs);
+        } else {
+            upkeepNeeded = false;
+            performData = "";
+        }
+    }
+
+    /**
+     * @dev Chainlink Automation: perform the settlement of eligible transactions
+     * Called by Chainlink Automation Network when checkUpkeep returns true
+     */
+    function performUpkeep(bytes calldata performData) external override {
+        require(msg.sender == tx.origin || tx.origin != address(0), "Only automation can call");
+        
+        uint256[] memory settleableTxs = abi.decode(performData, (uint256[]));
+        require(settleableTxs.length > 0, "No transactions to settle");
+        
+        // Limit batch size to prevent gas issues
+        uint256 batchSize = settleableTxs.length > maxBatchSize ? maxBatchSize : settleableTxs.length;
+        
+        for (uint256 i = 0; i < batchSize; i++) {
+            uint256 txId = settleableTxs[i];
+            Transaction storage txn = transactions[txId];
+            
+            // Double check conditions (in case state changed since checkUpkeep)
+            if (!txn.isSettled && !txn.isDisputed && block.timestamp >= txn.lockEndTimestamp) {
+                _settleTransaction(txId);
+            }
+        }
+        
+        // Update the last automation check position
+        if (batchSize > 0) {
+            lastAutomationCheck = settleableTxs[batchSize - 1];
+        }
+    }
+
+    /**
+     * @dev Returns array of transaction IDs that are ready for settlement.
+     * Useful for keepers/bots to find eligible transactions.
+     */
+    function getSettleableTransactions(uint256 startId, uint256 endId) external view returns (uint256[] memory) {
+        return _getSettleableTransactions(startId, endId);
+    }
+
+    /**
+     * @dev Internal function to get settleable transactions
+     */
+    function _getSettleableTransactions(uint256 startId, uint256 endId) internal view returns (uint256[] memory) {
+        require(endId >= startId, "Invalid range");
+        require(endId < nextTransactionId, "End ID out of bounds");
+        
+        // Estimate array size (worst case all are settleable)
+        uint256 maxCount = endId - startId + 1;
+        uint256[] memory tempIds = new uint256[](maxCount);
+        uint256 count = 0;
+        
+        for (uint256 i = startId; i <= endId; i++) {
+            Transaction storage txn = transactions[i];
+            if (!txn.isSettled && !txn.isDisputed && block.timestamp >= txn.lockEndTimestamp) {
+                tempIds[count] = i;
+                count++;
+            }
+        }
+        
+        // Create properly sized array
+        uint256[] memory settleableIds = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            settleableIds[i] = tempIds[i];
+        }
+        
+        return settleableIds;
+    }
+
+    /**
+     * @dev Batch settle multiple eligible transactions.
+     * Optimized for keepers/bots to automate settlements efficiently.
+     */
+    function batchSettleTransactions(uint256[] calldata txIds) external {
+        require(txIds.length > 0, "Empty array");
+        require(txIds.length <= 50, "Too many transactions"); // Gas limit protection
+
+        for (uint256 i = 0; i < txIds.length; i++) {
+            uint256 txId = txIds[i];
+            Transaction storage txn = transactions[txId];
+            
+            // Skip if already settled, disputed, or still in escrow
+            if (txn.isSettled || txn.isDisputed || block.timestamp < txn.lockEndTimestamp) {
+                continue;
+            }
+
+            _settleTransaction(txId);
+        }
+    }
+
+    /**
+     * @dev Set Chainlink Automation parameters
+     */
+    function setAutomationParameters(uint256 _maxBatchSize) external onlyOwner {
+        require(_maxBatchSize > 0 && _maxBatchSize <= 50, "Invalid batch size");
+        maxBatchSize = _maxBatchSize;
     }
 }
