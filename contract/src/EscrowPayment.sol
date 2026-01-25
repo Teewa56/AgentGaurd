@@ -3,14 +3,16 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterfaceAggregatorV3Interface.sol";
 import "./AgentRegistry.sol";
 import "./ReputationBond.sol";
 
 /**
  * @title EscrowPayment
  * @dev Manages payment locking, escrow periods, and transaction metadata.
+ * Compatible with Chainlink Automation for automatic settlements.
  */
-contract EscrowPayment is Ownable {
+contract EscrowPayment is Ownable, AutomationCompatibleInterfaceAggregatorV3Interface {
     mapping(address => bool) public supportedTokens;
     AgentRegistry public immutable REGISTRY;
     ReputationBond public immutable BOND;
@@ -22,6 +24,10 @@ contract EscrowPayment is Ownable {
     // Configurable state variables instead of constants
     uint256 public serviceFeeBps = 50; // 0.5% default
     int256 public reputationRewardSuccess = 2;
+    
+    // Chainlink Automation state
+    uint256 public lastAutomationCheck;
+    uint256 public maxBatchSize = 20; // Max transactions per automation call
 
     struct Transaction {
         address agent;
@@ -152,6 +158,7 @@ contract EscrowPayment is Ownable {
 
     /**
      * @dev Settles a transaction after the dispute window.
+     * Can be called by anyone after the escrow period ends (automatable by bots).
      */
     function settleTransaction(uint256 txId) external {
         Transaction storage txn = transactions[txId];
@@ -162,6 +169,13 @@ contract EscrowPayment is Ownable {
             "Escrow window still open"
         );
 
+        _settleTransaction(txId, txn);
+    }
+
+    /**
+     * @dev Internal settlement logic to avoid code duplication
+     */
+    function _settleTransaction(uint256 txId, Transaction storage txn) internal {
         txn.isSettled = true;
         IERC20 tokenContract = IERC20(txn.token);
 
@@ -196,6 +210,149 @@ contract EscrowPayment is Ownable {
         BOND.updateReputation(txn.agent, reputationRewardSuccess);
 
         emit TransactionSettled(txId, true);
+    }
+
+    /**
+     * @dev Chainlink Automation: check if there are transactions ready for settlement
+     * Returns true if there are eligible transactions to be settled
+     */
+    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory performData) {
+        uint256[] memory settleableTxs = _getSettleableTransactions(lastAutomationCheck, nextTransactionId - 1);
+        
+        if (settleableTxs.length > 0) {
+            upkeepNeeded = true;
+            performData = abi.encode(settleableTxs);
+        } else {
+            upkeepNeeded = false;
+            performData = "";
+        }
+    }
+
+    /**
+     * @dev Chainlink Automation: perform the settlement of eligible transactions
+     * Called by Chainlink Automation Network when checkUpkeep returns true
+     */
+    function performUpkeep(bytes calldata performData) external override {
+        require(msg.sender == tx.origin || tx.origin != address(0), "Only automation can call");
+        
+        uint256[] memory settleableTxs = abi.decode(performData, (uint256[]));
+        require(settleableTxs.length > 0, "No transactions to settle");
+        
+        // Limit batch size to prevent gas issues
+        uint256 batchSize = settleableTxs.length > maxBatchSize ? maxBatchSize : settleableTxs.length;
+        
+        for (uint256 i = 0; i < batchSize; i++) {
+            uint256 txId = settleableTxs[i];
+            Transaction storage txn = transactions[txId];
+            
+            // Double check conditions (in case state changed since checkUpkeep)
+            if (!txn.isSettled && !txn.isDisputed && block.timestamp >= txn.lockEndTimestamp) {
+                _settleTransaction(txId, txn);
+            }
+        }
+        
+        // Update the last automation check position
+        if (batchSize > 0) {
+            lastAutomationCheck = settleableTxs[batchSize - 1];
+        }
+    }
+
+    /**
+     * @dev Batch settle multiple eligible transactions.
+     * Optimized for keepers/bots to automate settlements efficiently.
+     */
+    function batchSettleTransactions(uint256[] calldata txIds) external {
+        require(txIds.length > 0, "Empty array");
+        require(txIds.length <= 50, "Too many transactions"); // Gas limit protection
+
+        for (uint256 i = 0; i < txIds.length; i++) {
+            uint256 txId = txIds[i];
+            Transaction storage txn = transactions[txId];
+            
+            // Skip if already settled, disputed, or still in escrow
+            if (txn.isSettled || txn.isDisputed || block.timestamp < txn.lockEndTimestamp) {
+                continue;
+            }
+
+            txn.isSettled = true;
+            IERC20 tokenContract = IERC20(txn.token);
+
+            // Calculate fees
+            uint256 fee = (txn.amount * serviceFeeBps) / 10000;
+            uint256 merchantAmount = txn.amount - fee;
+
+            // Release funds
+            require(
+                tokenContract.transfer(txn.merchant, merchantAmount),
+                "Merchant payment failed"
+            );
+
+            // Send fee to InsurancePool
+            if (insurancePool != address(0)) {
+                require(
+                    tokenContract.approve(insurancePool, fee),
+                    "Approve failed"
+                );
+                (bool success, ) = insurancePool.call(
+                    abi.encodeWithSignature(
+                        "receiveFees(address,uint256)",
+                        txn.token,
+                        fee
+                    )
+                );
+                require(success, "Fee transfer to pool failed");
+            }
+
+            // Increase reputation
+            BOND.updateReputation(txn.agent, reputationRewardSuccess);
+
+            emit TransactionSettled(txId, true);
+        }
+    }
+
+    /**
+     * @dev Returns array of transaction IDs that are ready for settlement.
+     * Useful for keepers/bots to find eligible transactions.
+     */
+    function getSettleableTransactions(uint256 startId, uint256 endId) external view returns (uint256[] memory) {
+        return _getSettleableTransactions(startId, endId);
+    }
+
+    /**
+     * @dev Internal function to get settleable transactions
+     */
+    function _getSettleableTransactions(uint256 startId, uint256 endId) internal view returns (uint256[] memory) {
+        require(endId >= startId, "Invalid range");
+        require(endId < nextTransactionId, "End ID out of bounds");
+        
+        // Estimate array size (worst case all are settleable)
+        uint256 maxCount = endId - startId + 1;
+        uint256[] memory tempIds = new uint256[](maxCount);
+        uint256 count = 0;
+        
+        for (uint256 i = startId; i <= endId; i++) {
+            Transaction storage txn = transactions[i];
+            if (!txn.isSettled && !txn.isDisputed && block.timestamp >= txn.lockEndTimestamp) {
+                tempIds[count] = i;
+                count++;
+            }
+        }
+        
+        // Create properly sized array
+        uint256[] memory settleableIds = new uint256[](count);
+        for (uint256 i = 0; i < count; i++) {
+            settleableIds[i] = tempIds[i];
+        }
+        
+        return settleableIds;
+    }
+
+    /**
+     * @dev Set Chainlink Automation parameters
+     */
+    function setAutomationParameters(uint256 _maxBatchSize) external onlyOwner {
+        require(_maxBatchSize > 0 && _maxBatchSize <= 50, "Invalid batch size");
+        maxBatchSize = _maxBatchSize;
     }
 
     /**
