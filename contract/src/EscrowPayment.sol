@@ -3,7 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterfaceAggregatorV3Interface.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./AgentRegistry.sol";
 import "./ReputationBond.sol";
 
@@ -12,7 +12,7 @@ import "./ReputationBond.sol";
  * @dev Manages payment locking, escrow periods, and transaction metadata.
  * Compatible with Chainlink Automation for automatic settlements.
  */
-contract EscrowPayment is Ownable, AutomationCompatibleInterfaceAggregatorV3Interface {
+contract EscrowPayment is Ownable, AggregatorV3Interface {
     mapping(address => bool) public supportedTokens;
     AgentRegistry public immutable REGISTRY;
     ReputationBond public immutable BOND;
