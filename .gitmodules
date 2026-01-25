@@ -1,3 +1,6 @@
 [submodule "contract/lib/openzeppelin-contracts"]
 	path = contract/lib/openzeppelin-contracts
 	url = https://github.com/openzeppelin/openzeppelin-contracts
+[submodule "contract/lib/foundry-chainlink-toolkit"]
+	path = contract/lib/foundry-chainlink-toolkit
+	url = https://github.com/smartcontractkit/foundry-chainlink-toolkit
