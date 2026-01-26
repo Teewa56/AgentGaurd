@@ -41,6 +41,7 @@
 - [ ] Set up A/B testing framework
 - [ ] Optimize for performance and SEO
 - [ ] Set up CI/CD pipelines for frontend deployments
+- [ ] Documentation website for technical, non-technical, and whitepaper
 
 ### 1.4 Infrastructure & DevOps
 - [ ] Set up monitoring dashboard for all services
