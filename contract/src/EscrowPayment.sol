@@ -24,7 +24,7 @@ contract EscrowPayment is Ownable, AutomationCompatibleInterface {
     // Configurable state variables instead of constants
     uint256 public serviceFeeBps = 50; // 0.5% default
     int256 public reputationRewardSuccess = 2;
-    
+
     // Chainlink Automation state
     uint256 public lastAutomationCheck;
     uint256 public maxBatchSize = 20; // Max transactions per automation call
@@ -175,7 +175,10 @@ contract EscrowPayment is Ownable, AutomationCompatibleInterface {
     /**
      * @dev Internal settlement logic to avoid code duplication
      */
-    function _settleTransaction(uint256 txId, Transaction storage txn) internal {
+    function _settleTransaction(
+        uint256 txId,
+        Transaction storage txn
+    ) internal {
         txn.isSettled = true;
         IERC20 tokenContract = IERC20(txn.token);
 
@@ -216,9 +219,23 @@ contract EscrowPayment is Ownable, AutomationCompatibleInterface {
      * @dev Chainlink Automation: check if there are transactions ready for settlement
      * Returns true if there are eligible transactions to be settled
      */
-    function checkUpkeep(bytes calldata /* checkData */) external view override returns (bool upkeepNeeded, bytes memory performData) {
-        uint256[] memory settleableTxs = _getSettleableTransactions(lastAutomationCheck, nextTransactionId - 1);
-        
+    function checkUpkeep(
+        bytes calldata /* checkData */
+    )
+        external
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory performData)
+    {
+        // Search from lastAutomationCheck up to a reasonable range
+        uint256 endBatch = lastAutomationCheck + 100; // Search window
+        if (endBatch >= nextTransactionId) endBatch = nextTransactionId - 1;
+
+        uint256[] memory settleableTxs = _getSettleableTransactions(
+            lastAutomationCheck,
+            endBatch
+        );
+
         if (settleableTxs.length > 0) {
             upkeepNeeded = true;
             performData = abi.encode(settleableTxs);
@@ -233,28 +250,45 @@ contract EscrowPayment is Ownable, AutomationCompatibleInterface {
      * Called by Chainlink Automation Network when checkUpkeep returns true
      */
     function performUpkeep(bytes calldata performData) external override {
-        require(msg.sender == tx.origin || tx.origin != address(0), "Only automation can call");
-        
+        require(
+            msg.sender == tx.origin || tx.origin != address(0),
+            "Only automation can call"
+        );
+
         uint256[] memory settleableTxs = abi.decode(performData, (uint256[]));
         require(settleableTxs.length > 0, "No transactions to settle");
-        
+
         // Limit batch size to prevent gas issues
-        uint256 batchSize = settleableTxs.length > maxBatchSize ? maxBatchSize : settleableTxs.length;
-        
+        uint256 batchSize = settleableTxs.length > maxBatchSize
+            ? maxBatchSize
+            : settleableTxs.length;
+
         for (uint256 i = 0; i < batchSize; i++) {
             uint256 txId = settleableTxs[i];
             Transaction storage txn = transactions[txId];
-            
-            // Double check conditions (in case state changed since checkUpkeep)
-            if (!txn.isSettled && !txn.isDisputed && block.timestamp >= txn.lockEndTimestamp) {
+
+            // Double check conditions
+            if (
+                !txn.isSettled &&
+                !txn.isDisputed &&
+                block.timestamp >= txn.lockEndTimestamp
+            ) {
                 _settleTransaction(txId, txn);
             }
         }
-        
-        // Update the last automation check position
-        if (batchSize > 0) {
-            lastAutomationCheck = settleableTxs[batchSize - 1];
+
+        // Safely advance lastAutomationCheck:
+        // Move it forward only as long as transactions are already settled or disputed
+        uint256 currentId = lastAutomationCheck;
+        while (currentId < nextTransactionId) {
+            Transaction storage txn = transactions[currentId];
+            if (txn.isSettled || txn.isDisputed) {
+                currentId++;
+            } else {
+                break;
+            }
         }
+        lastAutomationCheck = currentId;
     }
 
     /**
@@ -268,9 +302,13 @@ contract EscrowPayment is Ownable, AutomationCompatibleInterface {
         for (uint256 i = 0; i < txIds.length; i++) {
             uint256 txId = txIds[i];
             Transaction storage txn = transactions[txId];
-            
+
             // Skip if already settled, disputed, or still in escrow
-            if (txn.isSettled || txn.isDisputed || block.timestamp < txn.lockEndTimestamp) {
+            if (
+                txn.isSettled ||
+                txn.isDisputed ||
+                block.timestamp < txn.lockEndTimestamp
+            ) {
                 continue;
             }
 
@@ -314,36 +352,46 @@ contract EscrowPayment is Ownable, AutomationCompatibleInterface {
      * @dev Returns array of transaction IDs that are ready for settlement.
      * Useful for keepers/bots to find eligible transactions.
      */
-    function getSettleableTransactions(uint256 startId, uint256 endId) external view returns (uint256[] memory) {
+    function getSettleableTransactions(
+        uint256 startId,
+        uint256 endId
+    ) external view returns (uint256[] memory) {
         return _getSettleableTransactions(startId, endId);
     }
 
     /**
      * @dev Internal function to get settleable transactions
      */
-    function _getSettleableTransactions(uint256 startId, uint256 endId) internal view returns (uint256[] memory) {
+    function _getSettleableTransactions(
+        uint256 startId,
+        uint256 endId
+    ) internal view returns (uint256[] memory) {
         require(endId >= startId, "Invalid range");
         require(endId < nextTransactionId, "End ID out of bounds");
-        
+
         // Estimate array size (worst case all are settleable)
         uint256 maxCount = endId - startId + 1;
         uint256[] memory tempIds = new uint256[](maxCount);
         uint256 count = 0;
-        
+
         for (uint256 i = startId; i <= endId; i++) {
             Transaction storage txn = transactions[i];
-            if (!txn.isSettled && !txn.isDisputed && block.timestamp >= txn.lockEndTimestamp) {
+            if (
+                !txn.isSettled &&
+                !txn.isDisputed &&
+                block.timestamp >= txn.lockEndTimestamp
+            ) {
                 tempIds[count] = i;
                 count++;
             }
         }
-        
+
         // Create properly sized array
         uint256[] memory settleableIds = new uint256[](count);
         for (uint256 i = 0; i < count; i++) {
             settleableIds[i] = tempIds[i];
         }
-        
+
         return settleableIds;
     }
 
